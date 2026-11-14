@@ -1,7 +1,12 @@
 name: Build
 
-# Reusable: called by CI (every push to main) and Release (tags).
+# Runs on every push to main and on pull requests, and is reused by the
+# Release workflow (workflow_call) for tags.
 on:
+  push:
+    branches:
+      - main
+  pull_request:
   workflow_call:
 
 permissions:

@@ -15,7 +15,8 @@ permissions:
   contents: write
 
 jobs:
-  # Identical to CI: the exe that ships is the one CI already built and tested.
+  # Same reusable build as push/PR: the exe that ships is the one built and
+  # tested by the exact workflow that runs on main.
   build:
     uses: ./.github/workflows/build.yml
 

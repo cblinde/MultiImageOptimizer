@@ -239,7 +239,7 @@ src/           application source and build recipe
                main.py, gui.py, pipeline.py, aligner.py, stacker.py, rawio.py,
                build.spec, build.ps1, requirements.txt
 tests/         synthetic verification suite
-.github/       CI (tests + Windows build) and release workflows
+.github/       GitHub Actions: Build (push/PR) and Release workflows
 ```
 
 ## Troubleshooting
