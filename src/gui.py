@@ -92,6 +92,76 @@ FORMAT_FILTERS = {
     "png": "PNG image (*.png)",
 }
 
+#: Tooltips for the settings.  They explain the effect and when to choose it,
+#: because the labels alone cannot carry the trade-offs.
+INPUT_TIP = (
+    "Folder with the source frames. Supported: DNG, CR2/CR3, NEF, ARW, RAF, "
+    "RW2, ORF, PEF, SRW, TIFF, PNG, JPEG and BMP; mixed folders are fine."
+)
+FILES_TIP = (
+    "Pick individual frames instead of every file in a folder. The selection "
+    "wins over the folder and is what dropping images onto the window produces."
+)
+OUTPUT_TIP = (
+    "Optional explicit output file. Leave empty to write next to the sources as "
+    "<folder>_stack_noise_mean / noise_median / sr2x.<ext>. In Both mode two "
+    "files are written; an explicit path names the stack and adds the SR suffix."
+)
+MODE_TIP = (
+    "<b>Noise Reduction</b> — aligns the frames and combines them at native "
+    "resolution. Removes random sensor noise; use it for any static scene, "
+    "especially a tripod burst.<br><br>"
+    "<b>Super-Resolution</b> — additionally drizzles the aligned frames onto a "
+    "2–6× finer grid. Use it only when the frames contain real sub-pixel shifts "
+    "(handheld burst or sensor shift); identical tripod frames contain no new "
+    "detail.<br><br>"
+    "<b>Both</b> — one registration pass, two outputs: the native-resolution "
+    "stack and the super-resolution frame."
+)
+METHOD_TIP = (
+    "<b>Mean</b> — averages the aligned frames. Best for Gaussian sensor noise, "
+    "lowest noise floor and fastest; use it normally with a decent number of "
+    "frames.<br><br>"
+    "<b>Median</b> — takes the per-pixel median instead. Rejects hot pixels, dust "
+    "and moving objects, but is slightly softer and writes a scratch file per "
+    "frame (slower, more disk). Use it when transients must disappear."
+)
+FORMAT_TIP = (
+    "<b>DNG</b> — 16-bit LinearRaw with the source colour tags; best for raw "
+    "editors. Falls back to TIFF when the sources have no colour matrix."
+    "<br><br><b>TIFF</b> — 16-bit linear sRGB for software that respects linear "
+    "data.<br><br><b>PNG</b> — 16-bit sRGB, best for sharing and viewing."
+)
+UPSCALE_TIP = (
+    "Output grid factor for Super-Resolution (2–6×). 2× is a good default; higher "
+    "factors need real sub-pixel detail and much more memory and time. Ignored "
+    "in Noise Reduction mode."
+)
+PIXFRAC_TIP = (
+    "Drizzle drop size as a fraction of an input pixel (0.05–1.0). Smaller drops "
+    "give sharper results but need more frames and dithering; 0.75 is a safe "
+    "default, try 0.6 for soft results."
+)
+REFERENCE_TIP = (
+    "Frame that every other frame is aligned to. Auto uses the sharpest frame. "
+    "Pick a specific sharp, well-exposed frame if Auto chooses badly; a blurred "
+    "reference softens every result."
+)
+RECURSIVE_TIP = (
+    "Also use frames in sub-folders. output/, _* and *_aligned folders are "
+    "skipped, so previous results never become input."
+)
+ALIGNED_TIP = (
+    "Also write every registered frame to <output>_aligned/ for inspection. "
+    "One full-size file per frame; flick through them to check the alignment."
+)
+RUN_TIP = (
+    "Start processing with these settings. The button is disabled while a run "
+    "is active so the same frames cannot be started twice."
+)
+CANCEL_TIP = "Stop after the current frame; results already written are kept."
+OPEN_TIP = "Open the folder containing the last written image."
+
 _ARROW_PATHS: dict = {}
 _ARROW_DIR: Optional[QTemporaryDir] = None
 
@@ -576,27 +646,33 @@ class MainWindow(QMainWindow):
 
         self.input_edit = QLineEdit()
         self.input_edit.setPlaceholderText("Folder with the DNG / TIFF / PNG / JPEG frames…")
+        self.input_edit.setToolTip(INPUT_TIP)
         self.input_edit.textChanged.connect(self._on_input_changed)
         self.input_edit.textEdited.connect(self._on_input_typed)
         input_button = QPushButton("Browse…")
         input_button.setToolTip("Use every supported frame inside a folder")
         input_button.clicked.connect(self._browse_input)
         self.files_button = QPushButton("Select files…")
-        self.files_button.setToolTip(
-            "Pick individual frames, e.g. a burst spread over several folders"
-        )
+        self.files_button.setToolTip(FILES_TIP)
         self.files_button.clicked.connect(self._browse_files)
 
         self.output_edit = QLineEdit()
+        self.output_edit.setToolTip(OUTPUT_TIP)
         self.output_edit.textEdited.connect(self._on_output_edited)
         output_button = QPushButton("Browse…")
+        output_button.setToolTip("Choose an explicit output file instead of the default name.")
         output_button.clicked.connect(self._browse_output)
 
         self.frames_label = QLabel("No folder or files selected")
         self.frames_label.setObjectName("hint")
         self.frames_label.setWordWrap(True)
+        self.frames_label.setToolTip(
+            "How many supported frames were found in the selected folder or file list."
+        )
 
-        layout.addWidget(QLabel("Input"), 0, 0)
+        input_label = QLabel("Input")
+        input_label.setToolTip(INPUT_TIP)
+        layout.addWidget(input_label, 0, 0)
         layout.addWidget(self.input_edit, 0, 1)
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 0, 0, 0)
@@ -604,7 +680,9 @@ class MainWindow(QMainWindow):
         buttons.addWidget(input_button)
         buttons.addWidget(self.files_button)
         layout.addLayout(buttons, 0, 2)
-        layout.addWidget(QLabel("Output file"), 1, 0)
+        output_label = QLabel("Output file")
+        output_label.setToolTip(OUTPUT_TIP)
+        layout.addWidget(output_label, 1, 0)
         layout.addWidget(self.output_edit, 1, 1)
         layout.addWidget(output_button, 1, 2)
         layout.addWidget(self.frames_label, 2, 0, 1, 3)
@@ -620,53 +698,77 @@ class MainWindow(QMainWindow):
         self.mode_combo = QComboBox()
         for mode in MODES:
             self.mode_combo.addItem(MODE_LABELS[mode], mode)
+        self.mode_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.mode_combo.setToolTip(MODE_TIP)
         self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
 
         self.method_combo = QComboBox()
         for method in ("mean", "median"):
             self.method_combo.addItem(METHOD_LABELS[method], method)
+        self.method_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        self.method_combo.setToolTip(METHOD_TIP)
 
         self.format_combo = QComboBox()
         self.format_combo.addItem("16-bit DNG", "dng")
         self.format_combo.addItem("16-bit TIFF (linear)", "tiff")
         self.format_combo.addItem("16-bit PNG (sRGB)", "png")
+        self.format_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToContents
+        )
+        self.format_combo.setToolTip(FORMAT_TIP)
         self.format_combo.currentIndexChanged.connect(self._on_format_changed)
 
         self.upscale_spin = QSpinBox()
         self.upscale_spin.setRange(2, 6)
         self.upscale_spin.setValue(2)
         self.upscale_spin.setSuffix("×")
+        self.upscale_spin.setToolTip(UPSCALE_TIP)
 
         self.pixfrac_spin = QDoubleSpinBox()
         self.pixfrac_spin.setRange(0.05, 1.0)
         self.pixfrac_spin.setSingleStep(0.05)
         self.pixfrac_spin.setDecimals(2)
         self.pixfrac_spin.setValue(0.75)
+        self.pixfrac_spin.setToolTip(PIXFRAC_TIP)
 
         self.reference_combo = QComboBox()
         self.reference_combo.addItem("Auto (sharpest frame)", None)
+        self.reference_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.reference_combo.setMinimumContentsLength(28)
+        self.reference_combo.setToolTip(REFERENCE_TIP)
 
         self.recursive_check = QCheckBox("Include sub-folders")
+        self.recursive_check.setToolTip(RECURSIVE_TIP)
         self.aligned_check = QCheckBox("Export aligned frames")
-        self.aligned_check.setToolTip(
-            "Write every registered frame to <output>_aligned/ so the alignment "
-            "can be checked frame by frame."
-        )
+        self.aligned_check.setToolTip(ALIGNED_TIP)
 
-        layout.addWidget(QLabel("Mode"), 0, 0)
-        layout.addWidget(self.mode_combo, 0, 1)
-        layout.addWidget(QLabel("Stack method"), 0, 2)
-        layout.addWidget(self.method_combo, 0, 3)
-        layout.addWidget(QLabel("Output format"), 1, 0)
-        layout.addWidget(self.format_combo, 1, 1)
-        layout.addWidget(QLabel("Upscale factor"), 1, 2)
-        layout.addWidget(self.upscale_spin, 1, 3)
-        layout.addWidget(QLabel("Drizzle pixfrac"), 2, 0)
-        layout.addWidget(self.pixfrac_spin, 2, 1)
-        layout.addWidget(QLabel("Reference frame"), 2, 2)
-        layout.addWidget(self.reference_combo, 2, 3)
-        layout.addWidget(self.recursive_check, 3, 0, 1, 2)
-        layout.addWidget(self.aligned_check, 3, 2, 1, 2)
+        def setting_label(text: str, tip: str) -> QLabel:
+            """A label that keeps the explanation available when the field is disabled."""
+            label = QLabel(text)
+            label.setToolTip(tip)
+            return label
+
+        # Mode and reference frame span the panel: their values are the longest.
+        # The remaining settings sit in two label/field pairs, which still fits
+        # the 720 px minimum window without eliding any text.
+        layout.addWidget(setting_label("Mode", MODE_TIP), 0, 0)
+        layout.addWidget(self.mode_combo, 0, 1, 1, 3)
+        layout.addWidget(setting_label("Stack method", METHOD_TIP), 1, 0)
+        layout.addWidget(self.method_combo, 1, 1)
+        layout.addWidget(setting_label("Output format", FORMAT_TIP), 1, 2)
+        layout.addWidget(self.format_combo, 1, 3)
+        layout.addWidget(setting_label("Upscale factor", UPSCALE_TIP), 2, 0)
+        layout.addWidget(self.upscale_spin, 2, 1)
+        layout.addWidget(setting_label("Drizzle pixfrac", PIXFRAC_TIP), 2, 2)
+        layout.addWidget(self.pixfrac_spin, 2, 3)
+        layout.addWidget(setting_label("Reference frame", REFERENCE_TIP), 3, 0)
+        layout.addWidget(self.reference_combo, 3, 1, 1, 3)
+        layout.addWidget(self.recursive_check, 4, 0, 1, 2)
+        layout.addWidget(self.aligned_check, 4, 2, 1, 2)
 
         hint = QLabel(
             "Mean is best for Gaussian sensor noise, median removes hot pixels and "
@@ -674,7 +776,7 @@ class MainWindow(QMainWindow):
         )
         hint.setObjectName("hint")
         hint.setWordWrap(True)
-        layout.addWidget(hint, 4, 0, 1, 4)
+        layout.addWidget(hint, 5, 0, 1, 4)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(3, 1)
         return group
@@ -687,15 +789,18 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout()
         self.run_button = QPushButton("Run Processing")
         self.run_button.setObjectName("runButton")
+        self.run_button.setToolTip(RUN_TIP)
         self.run_button.clicked.connect(self._start_processing)
 
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setObjectName("cancelButton")
         self.cancel_button.setEnabled(False)
+        self.cancel_button.setToolTip(CANCEL_TIP)
         self.cancel_button.clicked.connect(self._cancel_processing)
 
         self.open_button = QPushButton("Open output folder")
         self.open_button.setEnabled(False)
+        self.open_button.setToolTip(OPEN_TIP)
         self.open_button.clicked.connect(self._open_output_folder)
 
         row.addWidget(self.run_button)
@@ -708,10 +813,13 @@ class MainWindow(QMainWindow):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setFormat("%p%")
+        self.progress_bar.setToolTip("Progress of the current run.")
         layout.addWidget(self.progress_bar)
 
         self.status_label = QLabel("Idle")
         self.status_label.setObjectName("status")
+        self.status_label.setWordWrap(True)
+        self.status_label.setToolTip("Current activity, result or error of the last run.")
         self._status_state = ""
         layout.addWidget(self.status_label)
         return group
@@ -721,6 +829,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
+        self.log_view.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.log_view.setMaximumBlockCount(4000)
         self.log_view.setFont(QFont("Cascadia Mono", 9))
         # The log should soak up leftover height instead of inflating the
@@ -728,6 +837,10 @@ class MainWindow(QMainWindow):
         self.log_view.setMinimumHeight(130)
         self.log_view.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored
+        )
+        self.log_view.setToolTip(
+            "Alignment, progress and result log. Long lines wrap; the newest "
+            "lines are shown at the bottom."
         )
         layout.addWidget(self.log_view)
         return group
@@ -844,13 +957,9 @@ class MainWindow(QMainWindow):
         if self.mode_combo.currentData() == "both":
             # Two files are produced, so a single suggested name would mislead.
             self.output_edit.clear()
-            self.output_edit.setPlaceholderText(
-                "Empty: two files next to the sources, …_stack_noise_mean/sr2x.<ext>"
-            )
+            self.output_edit.setPlaceholderText("Empty: two files next to the sources")
             return
-        self.output_edit.setPlaceholderText(
-            "Empty: <input>/<folder>_stack_<method>.<ext>"
-        )
+        self.output_edit.setPlaceholderText("Empty: automatic name next to the sources")
         if self.input_edit.text().strip():
             self.output_edit.setText(str(self._suggested_output()))
         else:
@@ -894,6 +1003,9 @@ class MainWindow(QMainWindow):
         self.reference_combo.blockSignals(True)
         self.reference_combo.clear()
         self.reference_combo.addItem("Auto (sharpest frame)", None)
+        self.reference_combo.setItemData(
+            0, REFERENCE_TIP, Qt.ItemDataRole.ToolTipRole
+        )
 
         try:
             frames = self._frames_in_scope()
@@ -903,6 +1015,11 @@ class MainWindow(QMainWindow):
 
         for index, frame in enumerate(frames):
             self.reference_combo.addItem(f"{index + 1}. {frame.name}", index)
+            self.reference_combo.setItemData(
+                index + 1,
+                f"{frame.name}\nUse this frame as the alignment reference.",
+                Qt.ItemDataRole.ToolTipRole,
+            )
         self.reference_combo.blockSignals(False)
 
         if self._selected_files:

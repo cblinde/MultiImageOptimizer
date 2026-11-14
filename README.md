@@ -122,6 +122,27 @@ mode writes two files that cannot be confused. Files with that `_stack_` marker
 are never read back as input, so a folder can be processed repeatedly without
 stacking an earlier result.
 
+### Choosing a mode and stack method
+
+| Mode | Produces | Use when |
+| --- | --- | --- |
+| **Noise Reduction** | Native-resolution mean or median stack. | You want cleaner frames without changing the pixel count. Works with any overlapping burst; a tripod is ideal. |
+| **Super-Resolution** | A 2–6× drizzle frame on a finer grid. | The frames contain real sub-pixel shifts (handheld burst or sensor shift). Identical tripod frames contain no new detail. |
+| **Both** | The native stack and the super-resolution frame in one registration pass. | You want both results and do not want to decode and align the frames twice. |
+
+**Mean** is the default: it averages the aligned frames, gives the lowest
+noise floor for Gaussian sensor noise and is the fastest option. **Median**
+takes the per-pixel median instead; it rejects hot pixels, dust and moving
+objects, at the cost of a little sharpness and a scratch file per frame
+(slower, more disk). Use median when transient objects must disappear.
+
+Every field also explains itself on hover. For the other settings: **Output
+format** is DNG for raw editors, TIFF for a linear workflow and PNG for
+sharing; **Upscale factor** is the 2–6× drizzle grid (2× is a good default);
+**Drizzle pixfrac** is the drop size (0.75 default, lower is sharper but needs
+more frames); **Reference frame** is what all frames align to (Auto picks the
+sharpest).
+
 ### Drag & drop
 
 Drop a folder — or a multi-selection of image files — onto
