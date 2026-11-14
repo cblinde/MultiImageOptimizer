@@ -7,6 +7,8 @@ stack, a drizzle-reconstructed higher-resolution frame, or both at once.
 
 It runs headless from the command line or as a desktop GUI when started without
 arguments, and can be packaged into a single `MultiImageOptimizer.exe`.
+The Python version runs on Windows, macOS and Linux; the prebuilt executable
+is Windows-only.
 
 ## Run on Windows (no installation)
 
@@ -28,7 +30,8 @@ release lets you verify the download.
 
 Because the exe is not code-signed, Windows SmartScreen may show
 "Windows protected your PC" on the first start: choose **More info → Run
-anyway**. If you prefer to build the exe yourself, see below.
+anyway**. If you prefer to build the exe yourself, see below. macOS and Linux
+users run the Python version; see *Install from source*.
 
 ## Features
 
@@ -58,17 +61,32 @@ anyway**. If you prefer to build the exe yourself, see below.
   folder, and can be changed freely. Optionally every registered frame can be
   exported separately for inspection.
 
-## Install from source
+## Install from source (Windows, macOS, Linux)
 
 Only needed for development or to run the Python sources directly. End users
-can use the downloadable exe above. Requires Python 3.12, the interpreter CI
-and the build kit use.
+on Windows can use the downloadable exe above. Requires Python 3.12 — the
+interpreter CI and the build kit use it.
 
-```bash
+Windows:
+
+```bat
 python -m venv .venv
-.venv\Scripts\activate            # Windows
+.venv\Scripts\activate
 pip install -r src/requirements.txt
 ```
+
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r src/requirements.txt
+```
+
+`msvc-runtime` is installed only on Windows; on macOS and Linux rawpy ships
+LibRaw in its wheel, so no separate native runtime is needed. On a minimal
+Linux desktop, Qt may need the usual XCB/OpenGL system libraries (for example
+`libxcb-cursor0` and `libegl1`).
 
 On Windows, `msvc-runtime` supplies `MSVCP140.dll`/`VCRUNTIME140.dll` inside the
 virtual environment, so rawpy works without installing the Visual C++
@@ -78,14 +96,16 @@ Windows loader automatically.
 ## GUI
 
 ```bash
-python src/main.py
+python src/main.py        # Windows
+python3 src/main.py       # macOS / Linux
 ```
 
-or double-click `MultiImageOptimizer.exe`. Choose the input — a folder with
-**Browse…**, individual images with **Select files…**, or just drop them on the
-window — pick mode, stacking method, output format and (optionally) an output
-file, then press **Run Processing**. Processing happens in a `QThread`, so the
-window stays responsive; progress and the per-frame alignment log are shown
+or double-click `MultiImageOptimizer.exe` on Windows. Choose the input — a
+folder with **Browse…**, individual images with **Select files…**, or just drop
+them on the window — pick mode, stacking method, output format and
+(optionally) an output file, then press **Run Processing**. Processing happens
+in a `QThread`, so the window stays responsive; progress and the per-frame
+alignment log are shown
 live, and a running job can be cancelled. **Help** (or F1) explains the engine
 and every option.
 
@@ -105,7 +125,9 @@ Drop a folder — or a multi-selection of image files — onto
 **immediately produces both results** (noise-reduced stack and
 super-resolution frame) with the remaining settings from the last session.
 Dragging onto the open window only fills in the input, so you can still adjust
-the options before pressing **Run Processing**.
+the options before pressing **Run Processing**. Dropping onto the application
+icon is Explorer-specific; on macOS and Linux start the GUI and drop the items
+on its window, or pass the folder as an argument.
 
 This works because Windows passes every dropped item as a plain command line
 argument. A drop always selects the combined mode, so one gesture yields both
@@ -224,6 +246,9 @@ discovery deliberately skips tool outputs.
 
 ## Build the standalone EXE
 
+The PyInstaller recipe and `BUILD.bat` produce a Windows executable; on macOS
+and Linux, run the Python sources directly instead.
+
 ```bash
 pip install "pyinstaller>=6.10,<7"
 pyinstaller --noconfirm src/build.spec
@@ -271,6 +296,9 @@ tests/         synthetic verification suite
 - **`ImportError: DLL load failed while importing _rawpy`** — the MSVC runtime
   is missing. `pip install msvc-runtime` (already in `src/requirements.txt`) or
   install the Visual C++ 2015–2022 redistributable.
+- **`Could not load the Qt platform plugin "xcb"` on Linux** — install the
+  XCB/OpenGL system libraries, for example `sudo apt install libxcb-cursor0
+  libegl1` on Debian/Ubuntu.
 - **Which bundled library failed?** — run `MultiImageOptimizer.exe --selftest`.
   It imports NumPy, OpenCV, tifffile, rawpy and PySide6 inside the bundled build
   and names every library that cannot load.
@@ -293,7 +321,7 @@ Two workflows live in `.github/workflows`:
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
 | **Build** (`build.yml`) | push to `main`, pull requests, and `workflow_call` from Release | `test`, `build`, `build-kit` |
-| **Release** (`release.yml`) | push to `main`, tag `v*.*.*`, or **Actions → Release → Run workflow** | `prepare` decides, calls Build, then publishes |
+| **Release** (`release.yml`) | push to `main` touching `src/main.py`, tag `v*.*.*`, or **Actions → Release → Run workflow** | `prepare` decides, calls Build, then publishes |
 
 - **`test`** byte-compiles `src` and `tests` and runs the unittest suite on
   `windows-latest`.
@@ -315,6 +343,9 @@ Two workflows live in `.github/workflows`:
 On a push to `main`, `prepare` compares `APP_VERSION` with the previous head
 and releases only when this push changed it and `v<APP_VERSION>` does not exist
 yet; otherwise the run ends after that check and no Windows build is paid for.
+The push trigger is path-filtered to `src/main.py`, where `APP_VERSION` lives,
+so README- and workflow-only commits do not start a Release run; path filters
+are not evaluated for tag pushes.
 Tag pushes and manual runs always release. Build and publish happen in the same run, because a tag created with
 `GITHUB_TOKEN` would not trigger a second workflow.
 
