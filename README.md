@@ -262,6 +262,34 @@ tests/         synthetic verification suite
   native resolution; super-resolution adds the high-resolution accumulators
   (about 16 bytes per output pixel).
 
+## Workflows
+
+Two workflows live in `.github/workflows`:
+
+| Workflow | Trigger | Jobs |
+| --- | --- | --- |
+| **Build** (`build.yml`) | push to `main`, pull requests, and `workflow_call` from Release | `test`, `build`, `build-kit` |
+| **Release** (`release.yml`) | tag `v*.*.*` or **Actions → Release → Run workflow** | calls Build, then publishes |
+
+- **`test`** byte-compiles `src` and `tests` and runs the unittest suite on
+  `windows-latest`.
+- **`build`** builds `MultiImageOptimizer.exe` with PyInstaller and smoke-tests
+  `--version`, the bundled native libraries, a synthetic DNG stack and an
+  offscreen GUI start. The executable is uploaded as the **`windows-x64`**
+  artifact, downloadable from the workflow run under **Artifacts**.
+- **`build-kit`** creates `MultiImageOptimizer-build-kit.zip`, extracts it and
+  runs `BUILD.bat --no-pause` exactly like a user, including the portable Python
+  download. It checks the resulting exe, licence files and zip, then runs the
+  kit-built exe with `--version` and `--selftest`. Pull requests skip this
+  duplicate Windows build; pushes to `main` and every Release run it. On failure
+  it prints the last 150 lines of the kit's `build-log.txt` and uploads that file
+  as the **`kit-build-log`** artifact for the run.
+
+The Release workflow calls Build first, so a failing test, exe or kit blocks
+publishing. It then checks the tag against `APP_VERSION` and uploads the exe,
+both zips, the licence files and `SHA256SUMS` to the GitHub Release, where they
+appear under **Assets**.
+
 ## Releases
 
 ### Cutting a release
