@@ -192,3 +192,88 @@ jobs:
           name: windows-x64
           path: dist/MultiImageOptimizer.exe
           if-no-files-found: error
+
+  # The release ships a build kit, so execute it on Windows instead of trusting
+  # its syntax: a broken BUILD.bat, a missing file or an incompatible package
+  # fails CI here instead of surfacing for users after the release.
+  build-kit:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Create the build kit archive
+        run: python .github/scripts/make_build_kit.py
+
+      - name: Build from the extracted kit with BUILD.bat
+        shell: pwsh
+        timeout-minutes: 25
+        run: |
+          $ErrorActionPreference = "Stop"
+          $kit = Join-Path $PWD "kit"
+          Expand-Archive -LiteralPath "MultiImageOptimizer-build-kit.zip" `
+            -DestinationPath $kit -Force
+          if (-not (Test-Path (Join-Path $kit "BUILD.bat"))) {
+            throw "The kit has no BUILD.bat"
+          }
+
+          Push-Location $kit
+          try {
+            # --no-pause: the pause at the end would block an unattended run.
+            & cmd /c "BUILD.bat --no-pause"
+            $code = $LASTEXITCODE
+          }
+          finally {
+            Pop-Location
+          }
+          if ($code -ne 0) { throw "BUILD.bat failed with exit code $code" }
+
+          $exe = Join-Path $kit "out\MultiImageOptimizer.exe"
+          foreach ($path in @(
+              $exe,
+              (Join-Path $kit "out\LICENSE"),
+              (Join-Path $kit "out\THIRD_PARTY_NOTICES.md"),
+              (Join-Path $kit "MultiImageOptimizer-windows-x64.zip")
+          )) {
+            if (-not (Test-Path $path)) {
+              throw "BUILD.bat did not produce $path"
+            }
+          }
+
+          # Run the exe this job built, not the one from the build job, to prove
+          # the downloaded portable Python and wheels make a working bundle.
+          $stdout = Join-Path $env:RUNNER_TEMP "kit-version.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "kit-version.err"
+          $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait `
+            -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $output = ((Get-Content $stdout -Raw -ErrorAction SilentlyContinue) +
+            (Get-Content $stderr -Raw -ErrorAction SilentlyContinue)).Trim()
+          Write-Host $output
+          if ($process.ExitCode -ne 0) {
+            throw "Kit exe --version exited with code $($process.ExitCode)"
+          }
+          if ($output -notmatch "Multi-Image Optimizer") {
+            throw "Kit exe --version printed no version string"
+          }
+
+          $stdout = Join-Path $env:RUNNER_TEMP "kit-selftest.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "kit-selftest.err"
+          $process = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait `
+            -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $out = Get-Content $stdout -Raw -ErrorAction SilentlyContinue
+          $err = Get-Content $stderr -Raw -ErrorAction SilentlyContinue
+          if ($out) { Write-Host $out }
+          if ($err) { Write-Host $err }
+          if ($process.ExitCode -ne 0) {
+            throw "Kit exe --selftest exited with code $($process.ExitCode)"
+          }
+          if ("$out$err" -notmatch "selftest ok") {
+            throw "Kit exe selftest printed no success line"
+          }
+
+          $size = (Get-Item $exe).Length / 1MB
+          Write-Host ("Kit build OK: {0:N1} MB executable" -f $size)

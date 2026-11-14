@@ -32,5 +32,6 @@ if "%CODE%"=="0" (
   echo See "%~dp0build-log.txt" for the full output.
 )
 echo.
-pause
+rem --no-pause keeps unattended runs (CI, scripts) from blocking at the end.
+if /i not "%~1"=="--no-pause" pause
 exit /b %CODE%

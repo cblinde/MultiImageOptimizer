@@ -36,15 +36,10 @@ jobs:
         run: python3 .github/scripts/check_release_version.py "$RELEASE_TAG"
 
       # The Windows exe is built on a runner; this kit lets anyone rebuild it
-      # locally with one double-click.
+      # locally with one double-click. CI runs the same script and executes the
+      # extracted kit on Windows before a release can get here.
       - name: Build local Windows build kit
-        run: |
-          set -euo pipefail
-          # Same layout as the repository so README paths stay valid.
-          mkdir -p kit/src
-          cp BUILD.bat README.md LICENSE THIRD_PARTY_NOTICES.md kit/
-          cp src/*.py src/build.spec src/requirements.txt src/build.ps1 kit/src/
-          ( cd kit && zip -qr ../MultiImageOptimizer-build-kit.zip . )
+        run: python3 .github/scripts/make_build_kit.py
 
       - uses: actions/download-artifact@v4
         with:

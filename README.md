@@ -296,7 +296,11 @@ source, `src/build.spec`, the licence files and the build scripts. To rebuild th
 executable on your own machine:
 
 1. Extract the archive to a short, writable path such as `C:\mio-build`.
-2. Double-click `BUILD.bat` and wait.
+2. Double-click `BUILD.bat` and wait. For unattended runs (scripts or CI),
+   `BUILD.bat --no-pause` skips the final key press.
+
+CI extracts this exact archive on a Windows runner and executes `BUILD.bat`
+with a timeout, so a broken kit fails before a release is published.
 
 The first run downloads the official portable Python 3.12 into `.python` and
 the build dependencies into it at `src/requirements.txt` versions, so there is no
