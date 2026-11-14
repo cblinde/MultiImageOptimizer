@@ -265,10 +265,11 @@ git push origin v1.2.0
 ```
 
 The tag starts the **Release** workflow (or run it manually with an explicit
-tag). It runs the test suite and the PyInstaller build on `windows-latest`,
-smoke-tests the resulting binary with `--version`, then publishes a GitHub
-Release whose assets are the self-contained `MultiImageOptimizer.exe` and a
-`SHA256SUMS` manifest. See `.github/workflows/release.yml`.
+tag). It runs the test suite and the PyInstaller build on `windows-latest`, then
+smoke-tests the binary (`--version`, a headless DNG stack and an offscreen GUI
+start), and finally publishes a GitHub Release whose assets are the
+self-contained `MultiImageOptimizer.exe` and a `SHA256SUMS` manifest. See
+`.github/workflows/release.yml`.
 
 ## Limitations
 

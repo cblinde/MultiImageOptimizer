@@ -53,9 +53,9 @@ jobs:
       - name: Build executable
         run: pyinstaller --noconfirm --clean build.spec
 
-      # Launch the bundle before publishing: a windowed build with a broken or
-      # missing DLL fails (or hangs on an error dialog) at start-up, which must
-      # fail here instead of shipping in a release.
+      # Cheapest check first: proves the one-file bundle bootstraps (extraction,
+      # Python and vcruntime DLLs, main.py imports). Native libraries are
+      # covered by the RAW and GUI smoke tests below.
       - name: Smoke-test executable
         shell: pwsh
         timeout-minutes: 5
@@ -79,6 +79,88 @@ jobs:
           }
           if ($output -notmatch "Multi-Image Optimizer") {
             throw "MultiImageOptimizer.exe --version printed no version string"
+          }
+
+      # DNG input forces the frozen exe to decode through rawpy/LibRaw, so a
+      # missing raw_r.dll, OpenCV DLL or MSVC runtime fails the build.
+      - name: Generate smoke frames
+        run: python .github/scripts/generate_dng_frames.py smoke_raw
+
+      - name: Smoke-test RAW pipeline
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $exe = Join-Path $PWD "dist/MultiImageOptimizer.exe"
+          $stdout = Join-Path $env:RUNNER_TEMP "run.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "run.err"
+          $exeArgs = @("-i", "smoke_raw", "--mode", "both", "--output-format", "png", "--max-dim", "400")
+          $process = Start-Process -FilePath $exe -ArgumentList $exeArgs -Wait -PassThru `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+          $out = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { "" }
+          $err = if (Test-Path $stderr) { Get-Content $stderr -Raw } else { "" }
+          Write-Host $out
+          if ($err) { Write-Host $err }
+
+          if ($process.ExitCode -ne 0) {
+            throw "Headless DNG stack exited with code $($process.ExitCode)"
+          }
+          foreach ($expected in @("smoke_raw/smoke_raw_stack_noise_mean.png", "smoke_raw/smoke_raw_stack_sr2x.png")) {
+            if (-not (Test-Path $expected)) { throw "Expected output missing: $expected" }
+          }
+
+      # Qt is imported lazily, so only a GUI start-up proves Qt6Core/Qt6Widgets
+      # and their platform plugin actually load from the bundle.
+      - name: Smoke-test GUI start-up
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $exe = Join-Path $PWD "dist/MultiImageOptimizer.exe"
+          # One-file PyInstaller starts the app in a child process, so look at
+          # every process with the binary's name, not just the launched PID.
+          $name = "MultiImageOptimizer"
+          $stdout = Join-Path $env:RUNNER_TEMP "gui.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "gui.err"
+          Start-Process -FilePath $exe -ArgumentList "--gui" `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr | Out-Null
+
+          # A windowed build that cannot load Qt shows an error dialog and stays
+          # alive, so wait for the DLLs to appear in a process instead.
+          $loaded = $false
+          $deadline = (Get-Date).AddSeconds(45)
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Milliseconds 500
+            $running = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+            if ($running.Count -eq 0) { break }
+            foreach ($instance in $running) {
+              try {
+                $modules = @($instance.Modules | ForEach-Object { $_.ModuleName })
+              } catch {
+                continue
+              }
+              if (($modules -contains "Qt6Core.dll") -and ($modules -contains "Qt6Widgets.dll")) {
+                $loaded = $true
+                break
+              }
+            }
+            if ($loaded) { break }
+          }
+
+          if ($loaded) { Start-Sleep -Seconds 2 }
+          $alive = @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+          if ($alive.Count -gt 0) { $alive | Stop-Process -Force -ErrorAction SilentlyContinue }
+
+          $out = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { "" }
+          $err = if (Test-Path $stderr) { Get-Content $stderr -Raw } else { "" }
+          if ($out) { Write-Host $out }
+          if ($err) { Write-Host $err }
+
+          if (-not $loaded) {
+            throw "GUI did not start: Qt6Core.dll and Qt6Widgets.dll were never loaded"
+          }
+          if ($alive.Count -eq 0) {
+            throw "GUI loaded Qt but exited during start-up"
           }
 
       - uses: actions/upload-artifact@v4
