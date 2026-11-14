@@ -21,7 +21,11 @@ ROOT = Path(__file__).resolve().parents[2]
 ARCHIVE = ROOT / "MultiImageOptimizer-build-kit.zip"
 
 ROOT_FILES = ("BUILD.bat", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md")
-DOC_FILES = ("docs/gui.png",)
+DOC_FILES = (
+    "docs/gui.png",
+    "docs/noise-reduction-example.png",
+    "docs/super-resolution-example.png",
+)
 SOURCE_FILES = (
     "main.py",
     "gui.py",

@@ -143,6 +143,32 @@ sharing; **Upscale factor** is the 2–6× drizzle grid (2× is a good default);
 more frames); **Reference frame** is what all frames align to (Auto picks the
 sharpest).
 
+### What stacking looks like
+
+Both examples are rendered by the actual engine from a synthetic test chart;
+they are not mockups or hand-edited pixels.
+
+**Noise reduction — averaging aligned frames.** The left panel is a single
+frame with independent sensor noise (σ ≈ 0.050 on a flat patch); the right
+panel is the mean of 24 aligned frames from the same burst (σ ≈ 0.009, about
+5.7× less). The scene is unchanged: only the random component cancels. That is
+why mean stacking helps any static burst, even one without sub-pixel movement.
+
+![Single noisy frame versus a mean stack of 24 frames](docs/noise-reduction-example.png)
+
+**Super-resolution — drizzling sub-pixel shifts.** A single low-resolution
+frame enlarged 2× with bicubic interpolation can only smooth the pixels it has.
+Here 16 frames were shifted by fractions of a pixel; drizzle places each sample
+on a grid twice as fine, so the small text and the line pairs are reconstructed
+instead of interpolated.
+
+![Single frame bicubic 2x versus a 2x drizzle stack](docs/super-resolution-example.png)
+
+Drizzle needs the shifts to contain real information. A fixed-tripod burst
+without sensor shift gives it nothing new, and the result is comparable to a
+good upscale; a handheld burst or a sensor-shift capture is where it gains
+detail.
+
 ### Drag & drop
 
 Drop a folder — or a multi-selection of image files — onto
@@ -313,7 +339,7 @@ src/           application source and build recipe
                main.py, gui.py, pipeline.py, aligner.py, stacker.py, rawio.py,
                build.spec, build.ps1, requirements.txt
 tests/         synthetic verification suite
-docs/          screenshot used by this README
+docs/          screenshots and stacking examples used by this README
 .github/       GitHub Actions: Build (push/PR) and Release workflows
 ```
 
