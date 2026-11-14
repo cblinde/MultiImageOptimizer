@@ -282,8 +282,9 @@ Two workflows live in `.github/workflows`:
   download. It checks the resulting exe, licence files and zip, then runs the
   kit-built exe with `--version` and `--selftest`. Pull requests run this
   duplicate Windows build only when they touch `BUILD.bat`, `src/build.ps1`,
-  `src/build.spec` or `.github/scripts/make_build_kit.py`; pushes to `main` and
-  every Release always run it. On failure it prints the last 150 lines of the
+  `src/build.spec`, `src/requirements.txt` or
+  `.github/scripts/make_build_kit.py`; pushes to `main` and every Release always
+  run it. On failure it prints the last 150 lines of the
   kit's `build-log.txt` and uploads that file as the **`kit-build-log`** artifact
   for the run.
 
