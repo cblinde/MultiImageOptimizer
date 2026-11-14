@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
   workflow_dispatch:
@@ -14,20 +16,64 @@ on:
 permissions:
   contents: write
 
-# Two runs for the same tag must not interleave uploads into one release.
+# One release at a time: a queued push re-reads the tags and does nothing if the
+# previous run already published the same APP_VERSION.
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
+  # Decide whether this run publishes. A push to main releases only when
+  # APP_VERSION has no tag yet; tag pushes and manual runs always release.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      tag: ${{ steps.decide.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: decide
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            tag="$INPUT_TAG"
+          elif [ "$EVENT_NAME" = "push" ] && [ "$REF_TYPE" = "tag" ]; then
+            tag="$REF_NAME"
+          else
+            version=$(python3 .github/scripts/check_release_version.py --print-version)
+            tag="v$version"
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null 2>&1; then
+              echo "$tag already exists; nothing to release."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              echo "tag=$tag" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag."
+
   # Same reusable build as push/PR: the exe that ships is the one built and
-  # tested by the exact workflow that runs on main.
+  # tested by the exact workflow that runs on main. It only starts once
+  # prepare says there is something to publish.
   build:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
     uses: ./.github/workflows/build.yml
 
-  # Publish the executable together with its licences.
+  # Publish the executable together with its licences. Build and publish stay
+  # in this run because a tag created with GITHUB_TOKEN would not trigger a
+  # second workflow.
   release:
-    needs: build
+    needs: [prepare, build]
+    if: always() && needs.prepare.outputs.publish == 'true' && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       # Checkout first: its default clean would remove downloaded artifacts, and
@@ -42,7 +88,7 @@ jobs:
       # unrecoverable once the asset is public, so check before uploading.
       - name: Check tag matches APP_VERSION
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: python3 .github/scripts/check_release_version.py "$RELEASE_TAG"
 
       # On workflow_dispatch the tag may already exist on another commit. The
@@ -50,7 +96,7 @@ jobs:
       # tag (and release history) that points somewhere else.
       - name: Check an existing tag points at this commit
         env:
-          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           set -euo pipefail
           if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" > /dev/null; then
@@ -89,9 +135,9 @@ jobs:
       - id: release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Multi-Image Optimizer ${{ inputs.tag || github.ref_name }}
+          name: Multi-Image Optimizer ${{ needs.prepare.outputs.tag }}
           draft: true
           generate_release_notes: true
           fail_on_unmatched_files: true

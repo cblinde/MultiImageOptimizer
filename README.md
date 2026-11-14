@@ -269,7 +269,7 @@ Two workflows live in `.github/workflows`:
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
 | **Build** (`build.yml`) | push to `main`, pull requests, and `workflow_call` from Release | `test`, `build`, `build-kit` |
-| **Release** (`release.yml`) | tag `v*.*.*` or **Actions → Release → Run workflow** | calls Build, then publishes |
+| **Release** (`release.yml`) | push to `main`, tag `v*.*.*`, or **Actions → Release → Run workflow** | `prepare` decides, calls Build, then publishes |
 
 - **`test`** byte-compiles `src` and `tests` and runs the unittest suite on
   `windows-latest`.
@@ -288,6 +288,12 @@ Two workflows live in `.github/workflows`:
   kit's `build-log.txt` and uploads that file as the **`kit-build-log`** artifact
   for the run.
 
+On a push to `main`, `prepare` reads `APP_VERSION` and the release only runs
+when `v<APP_VERSION>` does not exist yet; otherwise the run ends after that
+check and no Windows build is paid for. Tag pushes and manual runs always
+release. Build and publish happen in the same run, because a tag created with
+`GITHUB_TOKEN` would not trigger a second workflow.
+
 The Release workflow calls Build first, so a failing test, exe or kit blocks
 publishing. It then checks the tag against `APP_VERSION`, uploads the exe, both
 zips, the licence files and `SHA256SUMS` to a draft release, and publishes it
@@ -302,7 +308,9 @@ only after every upload succeeded; the assets then appear under **Assets**.
    always agree. The tag must be `v` + `APP_VERSION` (for example `v1.0.1` for
    `1.0.1`); the release job compares the two and fails instead of publishing a
    mismatched executable.
-2. Create the `vX.Y.Z` tag and push it:
+2. Push that commit to `main`. If `v<APP_VERSION>` does not exist yet, the
+   Release workflow builds and publishes it automatically; later pushes with
+   the same version do nothing. To release explicitly, push the tag instead:
 
    ```bash
    git tag v1.0.0
@@ -311,14 +319,19 @@ only after every upload succeeded; the assets then appear under **Assets**.
 
    Alternatively, run **Actions → Release → Run workflow** and enter the tag;
    it is created from the selected commit if it does not exist yet.
-3. The workflow reruns the test suite and the PyInstaller build on
+3. The same run calls the test suite and the PyInstaller build on
    `windows-latest`, then smoke-tests the executable (`--version`, a
    bundled-library selftest, a headless DNG stack and an offscreen GUI start).
+   A tag created by the workflow does not start a second run.
 4. On success it publishes the GitHub Release. From **Releases → Multi-Image
    Optimizer v1.0.0 → Assets** download `MultiImageOptimizer.exe` on its own,
    or the `MultiImageOptimizer-windows-x64.zip` archive, which also contains
    `LICENSE` and `THIRD_PARTY_NOTICES.md`. `MultiImageOptimizer-build-kit.zip`
    rebuilds the exe locally, and `SHA256SUMS` covers every asset.
+
+If an automatic run fails after its tag was created, rerun it with
+**Actions → Release → Run workflow** for that tag; later pushes with the same
+`APP_VERSION` do nothing because the tag already exists.
 
 ### Building the exe locally (Windows)
 
