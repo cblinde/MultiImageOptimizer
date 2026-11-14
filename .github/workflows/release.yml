@@ -60,6 +60,34 @@ jobs:
       - name: Build executable
         run: pyinstaller --noconfirm --clean build.spec
 
+      # Launch the bundle before publishing: a windowed build with a broken or
+      # missing DLL fails (or hangs on an error dialog) at start-up, which must
+      # fail here instead of shipping in a release.
+      - name: Smoke-test executable
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $exe = Join-Path $PWD "dist/MultiImageOptimizer.exe"
+          if (-not (Test-Path $exe)) { throw "Build produced no $exe" }
+
+          $stdout = Join-Path $env:RUNNER_TEMP "version.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "version.err"
+          # Start-Process -Wait also waits for GUI-subsystem apps, unlike & .
+          $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait -PassThru `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+          $out = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { "" }
+          $err = if (Test-Path $stderr) { Get-Content $stderr -Raw } else { "" }
+          $output = ("$out`n$err").Trim()
+          Write-Host $output
+
+          if ($process.ExitCode -ne 0) {
+            throw "MultiImageOptimizer.exe --version exited with code $($process.ExitCode)"
+          }
+          if ($output -notmatch "Multi-Image Optimizer") {
+            throw "MultiImageOptimizer.exe --version printed no version string"
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
