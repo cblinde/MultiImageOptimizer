@@ -214,8 +214,8 @@ QGroupBox {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
-    margin-top: 16px;
-    padding: 14px;
+    margin-top: 12px;
+    padding: 10px;
     font-weight: 600;
 }
 QGroupBox::title {
@@ -230,8 +230,8 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    padding: 7px 9px;
-    min-height: 20px;
+    padding: 5px 8px;
+    min-height: 18px;
     selection-background-color: #bfdbfe;
 }
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
@@ -300,7 +300,7 @@ QPushButton {
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    padding: 7px 14px;
+    padding: 6px 12px;
 }
 QPushButton:hover { background: #eef2f7; }
 QPushButton:disabled { color: #94a3b8; background: #f1f5f9; border-color: #e2e8f0; }
@@ -309,16 +309,16 @@ QPushButton#runButton {
     color: #ffffff;
     border: none;
     font-weight: 600;
-    padding: 10px 24px;
+    padding: 8px 20px;
 }
 QPushButton#runButton:hover { background: #1d4ed8; }
 QPushButton#runButton:disabled { background: #93b4f5; color: #eef2ff; }
-QPushButton#cancelButton { padding: 9px 18px; }
+QPushButton#cancelButton { padding: 7px 16px; }
 QProgressBar {
     border: 1px solid #e2e8f0;
     border-radius: 7px;
     background: #eef2f7;
-    height: 16px;
+    height: 14px;
     text-align: center;
     font-size: 11px;
     color: #334155;
@@ -331,7 +331,7 @@ QPlainTextEdit {
     border-radius: 8px;
     font-family: "Cascadia Mono", "Consolas", monospace;
     font-size: 12px;
-    padding: 8px;
+    padding: 6px;
 }
 QCheckBox { spacing: 6px; }
 """)
@@ -586,8 +586,8 @@ class MainWindow(QMainWindow):
         content = QWidget()
         content.setObjectName("content")
         layout = QVBoxLayout(content)
-        layout.setContentsMargins(22, 18, 22, 18)
-        layout.setSpacing(12)
+        layout.setContentsMargins(16, 12, 16, 14)
+        layout.setSpacing(8)
 
         scroll.setWidget(content)
         outer.addWidget(scroll)
@@ -626,7 +626,7 @@ class MainWindow(QMainWindow):
         screen and letting the layout collapse the fields.
         """
         hint = self._content.sizeHint()
-        width = max(hint.width(), 980)
+        width = max(hint.width(), 920)
         height = hint.height()
         screen = QApplication.primaryScreen()
         if screen is not None:
@@ -641,8 +641,8 @@ class MainWindow(QMainWindow):
     def _build_input_group(self) -> QGroupBox:
         group = QGroupBox("Files")
         layout = QGridLayout(group)
-        layout.setHorizontalSpacing(10)
-        layout.setVerticalSpacing(10)
+        layout.setHorizontalSpacing(8)
+        layout.setVerticalSpacing(6)
 
         self.input_edit = QLineEdit()
         self.input_edit.setPlaceholderText("Folder with the DNG / TIFF / PNG / JPEG frames…")
@@ -692,8 +692,8 @@ class MainWindow(QMainWindow):
     def _build_settings_group(self) -> QGroupBox:
         group = QGroupBox("Processing")
         layout = QGridLayout(group)
-        layout.setHorizontalSpacing(14)
-        layout.setVerticalSpacing(10)
+        layout.setHorizontalSpacing(10)
+        layout.setVerticalSpacing(6)
 
         self.mode_combo = QComboBox()
         for mode in MODES:
@@ -784,7 +784,7 @@ class MainWindow(QMainWindow):
     def _build_run_group(self) -> QGroupBox:
         group = QGroupBox("Run")
         layout = QVBoxLayout(group)
-        layout.setSpacing(10)
+        layout.setSpacing(6)
 
         row = QHBoxLayout()
         self.run_button = QPushButton("Run Processing")
@@ -834,7 +834,7 @@ class MainWindow(QMainWindow):
         self.log_view.setFont(QFont("Cascadia Mono", 9))
         # The log should soak up leftover height instead of inflating the
         # panel's preferred size and forcing a scroll bar on every start-up.
-        self.log_view.setMinimumHeight(130)
+        self.log_view.setMinimumHeight(100)
         self.log_view.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored
         )
