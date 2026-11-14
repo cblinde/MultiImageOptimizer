@@ -19,11 +19,15 @@ jobs:
   build:
     uses: ./.github/workflows/build.yml
 
-  # Publish the executable itself as the release asset.
+  # Publish the executable together with its licences.
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # Checkout first: its default clean would remove downloaded artifacts, and
+      # the release needs the tracked LICENSE and THIRD_PARTY_NOTICES.md.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -32,7 +36,11 @@ jobs:
         run: |
           set -euo pipefail
           cp artifacts/windows-x64/MultiImageOptimizer.exe MultiImageOptimizer.exe
-          sha256sum MultiImageOptimizer.exe > SHA256SUMS
+          mkdir -p stage/MultiImageOptimizer-windows-x64
+          cp MultiImageOptimizer.exe LICENSE THIRD_PARTY_NOTICES.md stage/MultiImageOptimizer-windows-x64/
+          ( cd stage && zip -qr ../MultiImageOptimizer-windows-x64.zip MultiImageOptimizer-windows-x64 )
+          sha256sum MultiImageOptimizer.exe MultiImageOptimizer-windows-x64.zip \
+            LICENSE THIRD_PARTY_NOTICES.md > SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -42,4 +50,7 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             MultiImageOptimizer.exe
+            MultiImageOptimizer-windows-x64.zip
+            LICENSE
+            THIRD_PARTY_NOTICES.md
             SHA256SUMS

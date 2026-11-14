@@ -232,6 +232,8 @@ stacker.py    mean/median stacking and drizzle super-resolution
 rawio.py      linear RAW/raster decoding, 16-bit TIFF/PNG/DNG writing
 gui.py        PySide6 interface with a QThread worker
 build.spec    PyInstaller one-file recipe
+LICENSE       project licence (MIT)
+THIRD_PARTY_NOTICES.md  bundled-component licences, including Qt/PySide6 LGPL-3.0
 .github/      CI (tests + Windows build) and release workflows
 tests/        synthetic verification suite
 ```
@@ -274,9 +276,10 @@ tests/        synthetic verification suite
 3. The workflow reruns the test suite and the PyInstaller build on
    `windows-latest`, then smoke-tests the executable (`--version`, a
    bundled-library selftest, a headless DNG stack and an offscreen GUI start).
-4. On success it publishes the GitHub Release. Download
-   `MultiImageOptimizer.exe` and `SHA256SUMS` from **Releases → Multi-Image
-   Optimizer v1.2.0 → Assets**.
+4. On success it publishes the GitHub Release. From **Releases → Multi-Image
+   Optimizer v1.2.0 → Assets** download `MultiImageOptimizer.exe` on its own,
+   or the `MultiImageOptimizer-windows-x64.zip` archive, which also contains
+   `LICENSE` and `THIRD_PARTY_NOTICES.md`; `SHA256SUMS` covers every asset.
 
 ## Limitations
 
@@ -289,3 +292,12 @@ tests/        synthetic verification suite
   affine + Euclidean ECC). Strong perspective changes are not corrected.
 - Very large super-resolution outputs (over 250 megapixels) are refused to
   avoid exhausting memory.
+
+## License
+
+MultiImageOptimizer is released under the MIT License; see [LICENSE](LICENSE).
+Its GUI uses Qt for Python (PySide6) and LibRaw under the LGPL, alongside other
+permissively licensed libraries; [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+lists every bundled component and reproduces the LGPL-3.0, GPL-3.0, LGPL-2.1,
+Apache-2.0 and GPL-2.0 texts plus the BSD and MIT licences. Release archives
+ship both files next to the executable.
