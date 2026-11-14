@@ -81,7 +81,8 @@ class PipelineConfig:
             raise PipelineError(f"Unknown stack method '{self.stack_method}'")
         if self.output_format not in OUTPUT_FORMATS:
             raise PipelineError(f"Unknown output format '{self.output_format}'")
-        if self.mode == "super_resolution":
+        # Combined mode drizzles too, so it needs the same limits.
+        if self.mode in ("super_resolution", "both"):
             if not 2 <= self.upscale <= 6:
                 raise PipelineError("Upscale factor must be between 2 and 6")
             if not 0.0 < self.pixfrac <= 1.0:

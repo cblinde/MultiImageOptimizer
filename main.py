@@ -211,7 +211,9 @@ class ConsoleProgress:
 def _config_from_args(args: argparse.Namespace):
     from pipeline import PipelineConfig
 
-    reference = None if args.reference is None else max(0, args.reference - 1)
+    # Keep 1-based -> 0-based exact; the pipeline rejects an out-of-range index,
+    # so --reference 0 fails instead of silently using the first frame.
+    reference = None if args.reference is None else args.reference - 1
     return PipelineConfig(
         input_dir=str(Path(args.input_dir).expanduser()),
         output_path=args.output,
@@ -244,18 +246,16 @@ def run_cli(args: argparse.Namespace) -> int:
             log=lambda message: LOGGER.info(message),
         )
     except PipelineCancelled:
-        progress.finish()
         LOGGER.warning("Cancelled")
         return 130
     except PipelineError as exc:
-        progress.finish()
         LOGGER.error("%s", exc)
         return 1
     except KeyboardInterrupt:
-        progress.finish()
         LOGGER.warning("Interrupted")
         return 130
     finally:
+        # Closes the progress line exactly once, on every exit path.
         progress.finish()
 
     for index, result in enumerate(results):
@@ -324,8 +324,8 @@ def _emit(message: str, error: bool = False) -> None:
 def run_selftest() -> int:
     """Import every bundled native dependency and report what failed.
 
-    ``--version`` exits before these imports happen, so only this check catches
-    a frozen build with a missing Qt or LibRaw DLL.
+    ``--version`` exits before these imports happen; this reports a frozen build
+    with a missing Qt or LibRaw DLL and names the libraries that cannot load.
     """
     checks = (
         ("NumPy", "numpy"),

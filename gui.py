@@ -407,8 +407,11 @@ main.py FILE1.dng FILE2.dng FILE3.dng        # selection, opens the GUI
 <tr><td><code>-v / -q</code></td><td>More / less logging.
     <code>--log-file FILE</code> appends to a file.</td></tr>
 <tr><td><code>--gui</code></td><td>Open the GUI even with other options.</td></tr>
+<tr><td><code>--selftest</code></td><td>Load the bundled libraries and exit; for
+    diagnostics.</td></tr>
 </table>
-<p>Exit code 0 means success, 1 a processing error, 130 cancellation.</p>
+<p>Exit code 0 means success, 1 a processing error, 2 invalid start-up input and
+130 cancellation.</p>
 
 <h2>Good to know</h2>
 <ul>

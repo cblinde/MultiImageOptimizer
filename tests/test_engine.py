@@ -589,6 +589,15 @@ class RawIoAndPipelineTests(unittest.TestCase):
         with self.assertRaises(pipeline.PipelineError):
             pipeline.run_pipeline(config)
 
+    def test_combined_mode_validates_drizzle_settings(self) -> None:
+        """Combined mode drizzles, so it must enforce the drizzle limits."""
+        for config in (
+            pipeline.PipelineConfig(input_dir=str(self.temp), mode="both", upscale=9),
+            pipeline.PipelineConfig(input_dir=str(self.temp), mode="both", pixfrac=1.5),
+        ):
+            with self.assertRaises(pipeline.PipelineError):
+                config.validate()
+
     def test_single_frame_is_rejected(self) -> None:
         folder = self.temp / "single"
         write_frames(folder, make_scene(80, 80)[None])
