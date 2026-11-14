@@ -198,13 +198,44 @@ jobs:
           path: dist/MultiImageOptimizer.exe
           if-no-files-found: error
 
+  # A pull request only pays for the kit build when it touches the kit itself.
+  # This job is skipped on pushes and Releases, where build-kit always runs.
+  kit-changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.changed.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: changed
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" |
+              grep -qxE '(BUILD\.bat|src/build\.ps1|src/build\.spec|\.github/scripts/make_build_kit\.py)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # The release ships a build kit, so execute it on Windows instead of trusting
   # its syntax: a broken BUILD.bat, a missing file or an incompatible package
-  # fails CI here instead of surfacing for users after the release.
-  # Pull requests skip this duplicate full build; main pushes and every Release
-  # (workflow_call from a tag or workflow_dispatch) still run it.
+  # fails CI here instead of surfacing for users after the release. Pull
+  # requests that change the kit run it before merge; main pushes and every
+  # Release (workflow_call from a tag or workflow_dispatch) always run it.
   build-kit:
-    if: github.event_name != 'pull_request'
+    needs: kit-changes
+    # always(): on push/Release the detector is skipped, and if it fails on a PR
+    # the empty output falls through to running the kit instead of silently
+    # dropping coverage.
+    if: |
+      always() &&
+      (github.event_name != 'pull_request' || needs.kit-changes.outputs.run != 'false')
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
