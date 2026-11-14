@@ -8,6 +8,28 @@ stack, a drizzle-reconstructed higher-resolution frame, or both at once.
 It runs headless from the command line or as a desktop GUI when started without
 arguments, and can be packaged into a single `MultiImageOptimizer.exe`.
 
+## Run on Windows (no installation)
+
+On 64-bit Windows 10/11 the easiest way to use the tool is the prebuilt
+executable. It needs no Python, no installer and no admin rights:
+
+1. Open the [releases page](https://github.com/cblinde/MultiImageOptimizer/releases) and
+   pick the latest version.
+2. Download `MultiImageOptimizer.exe`. If you also want the licence files next
+to it, download `MultiImageOptimizer-windows-x64.zip` instead; it contains the
+exe, `LICENSE` and `THIRD_PARTY_NOTICES.md`.
+3. Double-click the exe to open the GUI, or drag a folder (or a selection of
+images) onto it to process them immediately.
+
+The exe is a single self-contained file. Copy it anywhere you like and run it
+from there; nothing has to be installed or configured first. `--version` and
+`--selftest` work from a terminal as diagnostics, and `SHA256SUMS` in the same
+release lets you verify the download.
+
+Because the exe is not code-signed, Windows SmartScreen may show
+"Windows protected your PC" on the first start: choose **More info → Run
+anyway**. If you prefer to build the exe yourself, see below.
+
 ## Features
 
 - **Pipeline A — Noise reduction:** ORB + RANSAC registration refined by ECC
@@ -36,9 +58,11 @@ arguments, and can be packaged into a single `MultiImageOptimizer.exe`.
   folder, and can be changed freely. Optionally every registered frame can be
   exported separately for inspection.
 
-## Install
+## Install from source
 
-Requires Python 3.12, the interpreter CI and the build kit use.
+Only needed for development or to run the Python sources directly. End users
+can use the downloadable exe above. Requires Python 3.12, the interpreter CI
+and the build kit use.
 
 ```bash
 python -m venv .venv
