@@ -289,9 +289,9 @@ Two workflows live in `.github/workflows`:
   for the run.
 
 The Release workflow calls Build first, so a failing test, exe or kit blocks
-publishing. It then checks the tag against `APP_VERSION` and uploads the exe,
-both zips, the licence files and `SHA256SUMS` to the GitHub Release, where they
-appear under **Assets**.
+publishing. It then checks the tag against `APP_VERSION`, uploads the exe, both
+zips, the licence files and `SHA256SUMS` to a draft release, and publishes it
+only after every upload succeeded; the assets then appear under **Assets**.
 
 ## Releases
 

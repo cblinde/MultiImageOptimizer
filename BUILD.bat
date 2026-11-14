@@ -16,7 +16,7 @@ set "SCRIPT=%~dp0build.ps1"
 if not exist "%SCRIPT%" set "SCRIPT=%~dp0src\build.ps1"
 if not exist "%SCRIPT%" (
   echo Build script not found. Extract the complete archive first.
-  pause
+  if /i not "%~1"=="--no-pause" pause
   exit /b 1
 )
 

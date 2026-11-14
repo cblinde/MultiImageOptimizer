@@ -14,6 +14,11 @@ on:
 permissions:
   contents: write
 
+# Two runs for the same tag must not interleave uploads into one release.
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   # Same reusable build as push/PR: the exe that ships is the one built and
   # tested by the exact workflow that runs on main.
@@ -26,8 +31,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Checkout first: its default clean would remove downloaded artifacts, and
-      # the release needs the tracked LICENSE and THIRD_PARTY_NOTICES.md.
+      # the release needs the tracked LICENSE and THIRD_PARTY_NOTICES.md. Full
+      # history and tags are needed to compare an existing tag with this commit.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       # Publishing an exe that reports a different version than its tag is
       # unrecoverable once the asset is public, so check before uploading.
@@ -35,6 +44,25 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: python3 .github/scripts/check_release_version.py "$RELEASE_TAG"
+
+      # On workflow_dispatch the tag may already exist on another commit. The
+      # assets built here come from this commit, so refuse to attach them to a
+      # tag (and release history) that points somewhere else.
+      - name: Check an existing tag points at this commit
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG" > /dev/null; then
+            tag_commit=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
+            if [ "$tag_commit" != "$GITHUB_SHA" ]; then
+              echo "::error::Tag $RELEASE_TAG points at $tag_commit, but this run builds $GITHUB_SHA."
+              exit 1
+            fi
+            echo "Tag $RELEASE_TAG already points at $GITHUB_SHA."
+          else
+            echo "Tag $RELEASE_TAG does not exist yet; it will be created at $GITHUB_SHA."
+          fi
 
       # The Windows exe is built on a runner; this kit lets anyone rebuild it
       # locally with one double-click. CI runs the same script and executes the
@@ -56,10 +84,15 @@ jobs:
           sha256sum MultiImageOptimizer.exe MultiImageOptimizer-windows-x64.zip \
             MultiImageOptimizer-build-kit.zip LICENSE THIRD_PARTY_NOTICES.md > SHA256SUMS
 
-      - uses: softprops/action-gh-release@v2
+      # Upload into a draft first: if any asset upload fails, no public release
+      # with a partial asset set exists. The next step publishes it.
+      - id: release
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           name: Multi-Image Optimizer ${{ inputs.tag || github.ref_name }}
+          draft: true
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
@@ -69,3 +102,12 @@ jobs:
             LICENSE
             THIRD_PARTY_NOTICES.md
             SHA256SUMS
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api --method PATCH \
+            "repos/${{ github.repository }}/releases/${{ steps.release.outputs.id }}" \
+            -F draft=false
