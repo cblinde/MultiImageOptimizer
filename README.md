@@ -10,6 +10,10 @@ arguments, and can be packaged into a single `MultiImageOptimizer.exe`.
 The Python version runs on Windows, macOS and Linux; the prebuilt executable
 is Windows-only.
 
+![Multi-Image Optimizer GUI](docs/gui.png)
+
+*The GUI after a combined noise-reduction and super-resolution run.*
+
 ## Run on Windows (no installation)
 
 On 64-bit Windows 10/11 the easiest way to use the tool is the prebuilt
@@ -288,6 +292,7 @@ src/           application source and build recipe
                main.py, gui.py, pipeline.py, aligner.py, stacker.py, rawio.py,
                build.spec, build.ps1, requirements.txt
 tests/         synthetic verification suite
+docs/          screenshot used by this README
 .github/       GitHub Actions: Build (push/PR) and Release workflows
 ```
 
