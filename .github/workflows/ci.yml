@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # Same test + build used for releases, so a Windows problem shows up here
+  # before a tag is pushed.
+  build:
+    uses: ./.github/workflows/build.yml

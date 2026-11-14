@@ -15,84 +15,9 @@ permissions:
   contents: write
 
 jobs:
-  # Compile and test on the platform that ships.
-  test:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements.txt
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-
-      # gui.py is not imported by the tests, so compile it explicitly.
-      - name: Byte-compile sources
-        run: python -m compileall -q aligner.py gui.py main.py pipeline.py rawio.py stacker.py tests
-
-      - name: Run tests
-        run: python -m unittest discover -s tests -v
-
-  # Build the self-contained single-file executable.
+  # Identical to CI: the exe that ships is the one CI already built and tested.
   build:
-    needs: test
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements.txt
-
-      - name: Install build dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt "pyinstaller>=6.3"
-
-      - name: Build executable
-        run: pyinstaller --noconfirm --clean build.spec
-
-      # Launch the bundle before publishing: a windowed build with a broken or
-      # missing DLL fails (or hangs on an error dialog) at start-up, which must
-      # fail here instead of shipping in a release.
-      - name: Smoke-test executable
-        shell: pwsh
-        timeout-minutes: 5
-        run: |
-          $exe = Join-Path $PWD "dist/MultiImageOptimizer.exe"
-          if (-not (Test-Path $exe)) { throw "Build produced no $exe" }
-
-          $stdout = Join-Path $env:RUNNER_TEMP "version.out"
-          $stderr = Join-Path $env:RUNNER_TEMP "version.err"
-          # Start-Process -Wait also waits for GUI-subsystem apps, unlike & .
-          $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait -PassThru `
-            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-
-          $out = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { "" }
-          $err = if (Test-Path $stderr) { Get-Content $stderr -Raw } else { "" }
-          $output = ("$out`n$err").Trim()
-          Write-Host $output
-
-          if ($process.ExitCode -ne 0) {
-            throw "MultiImageOptimizer.exe --version exited with code $($process.ExitCode)"
-          }
-          if ($output -notmatch "Multi-Image Optimizer") {
-            throw "MultiImageOptimizer.exe --version printed no version string"
-          }
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-x64
-          path: dist/MultiImageOptimizer.exe
-          if-no-files-found: error
+    uses: ./.github/workflows/build.yml
 
   # Publish the executable itself as the release asset.
   release:
