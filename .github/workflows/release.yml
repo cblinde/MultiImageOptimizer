@@ -28,6 +28,13 @@ jobs:
       # the release needs the tracked LICENSE and THIRD_PARTY_NOTICES.md.
       - uses: actions/checkout@v4
 
+      # Publishing an exe that reports a different version than its tag is
+      # unrecoverable once the asset is public, so check before uploading.
+      - name: Check tag matches APP_VERSION
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: python3 .github/scripts/check_release_version.py "$RELEASE_TAG"
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts

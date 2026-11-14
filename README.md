@@ -264,7 +264,9 @@ tests/        synthetic verification suite
 
 1. Set `APP_VERSION` in `main.py` to the release version and commit it. That is
    the only definition: the GUI imports it, so `--version` and the window title
-   always agree with the tag.
+   always agree. The tag must be `v` + `APP_VERSION` (for example `v1.0.1` for
+   `1.0.1`); the release job compares the two and fails instead of publishing a
+   mismatched executable.
 2. Create the `vX.Y.Z` tag and push it:
 
    ```bash
