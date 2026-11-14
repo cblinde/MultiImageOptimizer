@@ -15,9 +15,9 @@ permissions:
   contents: write
 
 jobs:
-  # Compile and test once before anything is packaged.
+  # Compile and test on the platform that ships.
   test:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -39,18 +39,10 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -s tests -v
 
-  # Build the standalone executable for each platform.
+  # Build the self-contained single-file executable.
   build:
     needs: test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux-x64
-          - os: windows-latest
-            platform: windows-x64
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -60,7 +52,7 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt "pyinstaller>=6.3"
@@ -70,32 +62,24 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}
-          path: dist/MultiImageOptimizer*
+          name: windows-x64
+          path: dist/MultiImageOptimizer.exe
           if-no-files-found: error
 
-  # Package both binaries and publish them as a GitHub Release.
+  # Publish the executable itself as the release asset.
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Package release archives
+      - name: Prepare release files
         run: |
           set -euo pipefail
-          mkdir -p release/MultiImageOptimizer-linux-x64 release/MultiImageOptimizer-windows-x64
-          cp artifacts/linux-x64/MultiImageOptimizer release/MultiImageOptimizer-linux-x64/
-          cp artifacts/windows-x64/MultiImageOptimizer.exe release/MultiImageOptimizer-windows-x64/
-          cp README.md release/MultiImageOptimizer-linux-x64/
-          cp README.md release/MultiImageOptimizer-windows-x64/
-          ( cd release && tar -czf ../MultiImageOptimizer-linux-x64.tar.gz MultiImageOptimizer-linux-x64 )
-          ( cd release && zip -qr ../MultiImageOptimizer-windows-x64.zip MultiImageOptimizer-windows-x64 )
-          sha256sum MultiImageOptimizer-*.tar.gz MultiImageOptimizer-*.zip > SHA256SUMS
+          cp artifacts/windows-x64/MultiImageOptimizer.exe MultiImageOptimizer.exe
+          sha256sum MultiImageOptimizer.exe > SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -104,6 +88,5 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
-            MultiImageOptimizer-*.tar.gz
-            MultiImageOptimizer-*.zip
+            MultiImageOptimizer.exe
             SHA256SUMS

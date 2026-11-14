@@ -254,8 +254,9 @@ tests/        synthetic verification suite
 ## Releases
 
 Pushing a version tag (`v*.*.*`), or running the **Release** workflow with an
-explicit tag, tests and builds the standalone executables on Windows and Linux
-and publishes them as a GitHub Release. See `.github/workflows/release.yml`.
+explicit tag, tests and builds the self-contained `MultiImageOptimizer.exe` on a
+Windows runner and attaches it directly to a GitHub Release, with a
+`SHA256SUMS` manifest next to it. See `.github/workflows/release.yml`.
 
 ## Limitations
 
