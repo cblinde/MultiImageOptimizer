@@ -232,6 +232,8 @@ stacker.py    mean/median stacking and drizzle super-resolution
 rawio.py      linear RAW/raster decoding, 16-bit TIFF/PNG/DNG writing
 gui.py        PySide6 interface with a QThread worker
 build.spec    PyInstaller one-file recipe
+BUILD.bat     one-click Windows build (portable Python, no setup)
+build.ps1     the steps BUILD.bat runs
 LICENSE       project licence (MIT)
 THIRD_PARTY_NOTICES.md  bundled-component licences, including Qt/PySide6 LGPL-3.0
 .github/      CI (tests + Windows build) and release workflows
@@ -283,6 +285,30 @@ tests/        synthetic verification suite
    Optimizer v1.2.0 → Assets** download `MultiImageOptimizer.exe` on its own,
    or the `MultiImageOptimizer-windows-x64.zip` archive, which also contains
    `LICENSE` and `THIRD_PARTY_NOTICES.md`; `SHA256SUMS` covers every asset.
+
+### Building the exe locally (Windows)
+
+Releases also ship `MultiImageOptimizer-build-kit.zip`, which contains the
+source, `build.spec`, the licence files and the build scripts. To rebuild the
+executable on your own machine:
+
+1. Extract the archive to a short, writable path such as `C:\mio-build`.
+2. Double-click `BUILD.bat` and wait.
+
+The first run downloads the official portable Python 3.12 into `.python` and
+the build dependencies into it at `requirements.txt` versions, so there is no
+system Python install, no registry change, no admin prompt and no need for
+developer tools. It then runs PyInstaller and leaves you with:
+
+- `out\MultiImageOptimizer.exe` - the self-contained executable, with
+  `LICENSE` and `THIRD_PARTY_NOTICES.md` beside it
+- `MultiImageOptimizer-windows-x64.zip` - those three files zipped
+- `build-log.txt` - the complete output, for when something fails
+
+A 64-bit Windows 10/11 machine and an internet connection are required on the
+first run (roughly 200 MB of downloads); later runs reuse `.python` and only
+rebuild. Delete `.python`, `.downloads`, `build`, `dist` and `out` to start
+from scratch.
 
 ## Limitations
 

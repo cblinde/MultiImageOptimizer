@@ -31,3 +31,10 @@ Thumbs.db
 *.log
 tmp/
 *_aligned/
+
+# Local Windows build kit output (BUILD.bat)
+.python/
+.downloads/
+out/
+MultiImageOptimizer-build-kit.zip
+MultiImageOptimizer-windows-x64.zip

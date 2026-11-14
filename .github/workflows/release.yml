@@ -35,6 +35,16 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: python3 .github/scripts/check_release_version.py "$RELEASE_TAG"
 
+      # The Windows exe is built on a runner; this kit lets anyone rebuild it
+      # locally with one double-click.
+      - name: Build local Windows build kit
+        run: |
+          set -euo pipefail
+          mkdir -p kit
+          cp BUILD.bat build.ps1 main.py gui.py pipeline.py aligner.py stacker.py rawio.py \
+            build.spec requirements.txt LICENSE THIRD_PARTY_NOTICES.md README.md kit/
+          ( cd kit && zip -qr ../MultiImageOptimizer-build-kit.zip . )
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -47,7 +57,7 @@ jobs:
           cp MultiImageOptimizer.exe LICENSE THIRD_PARTY_NOTICES.md stage/MultiImageOptimizer-windows-x64/
           ( cd stage && zip -qr ../MultiImageOptimizer-windows-x64.zip MultiImageOptimizer-windows-x64 )
           sha256sum MultiImageOptimizer.exe MultiImageOptimizer-windows-x64.zip \
-            LICENSE THIRD_PARTY_NOTICES.md > SHA256SUMS
+            MultiImageOptimizer-build-kit.zip LICENSE THIRD_PARTY_NOTICES.md > SHA256SUMS
 
       - uses: softprops/action-gh-release@v2
         with:
@@ -58,6 +68,7 @@ jobs:
           files: |
             MultiImageOptimizer.exe
             MultiImageOptimizer-windows-x64.zip
+            MultiImageOptimizer-build-kit.zip
             LICENSE
             THIRD_PARTY_NOTICES.md
             SHA256SUMS
