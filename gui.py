@@ -811,12 +811,20 @@ class MainWindow(QMainWindow):
         )
         if path:
             self.output_edit.setText(path)
+            # Programmatic setText does not emit textEdited, so record the
+            # choice here or the next mode/format change overwrites it.
+            self.output_edit.setProperty("user_edited", True)
 
     def _suggested_output(self) -> Path:
         folder = self.input_edit.text().strip()
+        suffix = FORMAT_SUFFIXES.get(str(self.format_combo.currentData()), ".tif")
         if not folder:
-            suffix = FORMAT_SUFFIXES.get(str(self.format_combo.currentData()), ".tif")
             return Path("output") / f"stack{suffix}"
+        if self.mode_combo.currentData() == "both":
+            # Combined mode appends the per-mode tags to this stem, so do not
+            # seed a name that already carries one.
+            root = Path(folder)
+            return root / f"{root.name or 'stack'}_stack{suffix}"
         return rawio.default_output_path(
             folder,
             str(self.mode_combo.currentData()),
@@ -825,9 +833,10 @@ class MainWindow(QMainWindow):
             self.upscale_spin.value(),
         )
 
-    def _on_output_edited(self, _text: str) -> None:
-        # Once the user types a path we stop overwriting it automatically.
-        self.output_edit.setProperty("user_edited", True)
+    def _on_output_edited(self, text: str) -> None:
+        # Once the user types a path we stop overwriting it automatically, but
+        # clearing the field hands control back to the suggestion.
+        self.output_edit.setProperty("user_edited", bool(text.strip()))
 
     def _set_auto_output(self) -> None:
         if self.output_edit.property("user_edited"):
@@ -1137,7 +1146,15 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
             self._worker.cancel()
-            self._worker.wait(5000)
+            if not self._worker.wait(10000):
+                QMessageBox.warning(
+                    self,
+                    "Still processing",
+                    "The current frame is still being finished. "
+                    "Close the window again in a moment.",
+                )
+                event.ignore()
+                return
         self._save_settings()
         super().closeEvent(event)
 

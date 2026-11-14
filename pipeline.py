@@ -488,6 +488,7 @@ def _finish(
                 paths,
                 prepared.usable_matrices,
                 method=config.stack_method,
+                temp_dir=config.temp_dir,
                 progress=lambda fraction, message: emit(0.84 * fraction, message),
                 cancelled=cancel,
                 aligned=aligned_callback,

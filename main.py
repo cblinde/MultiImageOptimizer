@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import logging
 import multiprocessing
+import os
 import sys
 from pathlib import Path
 from typing import List, Optional, Sequence
@@ -23,6 +24,19 @@ APP_NAME = "Multi-Image Optimizer"
 APP_VERSION = "1.0.0"
 
 LOGGER = logging.getLogger("mio")
+
+
+def _ensure_standard_streams() -> None:
+    """Give windowed builds a writable stdout/stderr.
+
+    PyInstaller's windowed bootloader leaves ``sys.stdout`` and ``sys.stderr``
+    as ``None`` when no console is attached, which breaks ``--version``,
+    ``--help`` and the progress renderer.  Point them at the null device so
+    every code path can write safely; the GUI never shows this text anyway.
+    """
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,7 +185,7 @@ def configure_logging(verbose: int, quiet: bool, log_file: str) -> None:
     """Configure the root logger for console and optional file output."""
     level = logging.WARNING if quiet else (logging.DEBUG if verbose else logging.INFO)
     handlers: List[logging.Handler] = []
-    if not quiet:
+    if not quiet and sys.stderr is not None:
         handlers.append(logging.StreamHandler(sys.stderr))
     if log_file:
         handlers.append(logging.FileHandler(log_file, encoding="utf-8"))
@@ -188,7 +202,9 @@ class ConsoleProgress:
     """Single-line progress renderer for headless runs."""
 
     def __init__(self, enabled: bool = True) -> None:
-        self.enabled = enabled and sys.stderr.isatty()
+        self.enabled = (
+            enabled and sys.stderr is not None and sys.stderr.isatty()
+        )
         self._last_bucket = -1
 
     def __call__(self, fraction: float, message: str) -> None:
@@ -295,7 +311,7 @@ def launch_gui(
     except ImportError as exc:
         message = (
             "The graphical interface requires PySide6.\n"
-            "Install it with:  pip install PySide6\n"
+            "Install it with:  pip install PySide6-Essentials\n"
             f"Details: {exc}"
         )
         LOGGER.error("%s", message)
@@ -425,6 +441,7 @@ def _show_fatal_dialog(message: str) -> None:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Route between GUI (no arguments) and CLI (arguments present)."""
+    _ensure_standard_streams()
     multiprocessing.freeze_support()
     arguments = list(sys.argv[1:] if argv is None else argv)
 

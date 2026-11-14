@@ -38,7 +38,7 @@ arguments, and can be packaged into a single `MultiImageOptimizer.exe`.
 
 ## Install
 
-Requires Python 3.10 or newer.
+Requires Python 3.12, the interpreter CI and the build kit use.
 
 ```bash
 python -m venv .venv
@@ -190,7 +190,9 @@ start-up or drag-and-drop input and `130` when cancelled.
   to someone else; it carries no DNG colour metadata.
 - **TIFF:** 16-bit RGB, zlib-compressed, tagged as linear sRGB. Open it in
   software that respects linear data, or apply a display transform.
-- A DNG or PNG produced by this tool can be fed back in as an input frame.
+- A DNG or PNG produced by this tool can be used as an input frame again
+after renaming it so the name no longer contains the `_stack_` marker;
+discovery deliberately skips tool outputs.
 - Reading is format aware: RAW and 16-bit TIFF samples are linear and used
   as-is, while PNG/JPEG/BMP and 8-bit TIFF are treated as gamma-encoded sRGB and
   linearised on load. That keeps stacking in linear light either way, at the
@@ -199,9 +201,13 @@ start-up or drag-and-drop input and `130` when cancelled.
 ## Build the standalone EXE
 
 ```bash
-pip install pyinstaller
+pip install "pyinstaller>=6.10,<7"
 pyinstaller --noconfirm build.spec
 ```
+
+On Windows without a prepared Python, double-click `BUILD.bat` instead: it
+provisions a portable interpreter inside the folder and runs the same spec (see
+*Building the exe locally* under Releases).
 
 The result is `dist/MultiImageOptimizer.exe` (single file, no console window).
 The spec bundles LibRaw (`raw_r.dll`), the OpenMP runtime and the MSVC runtime
@@ -272,8 +278,8 @@ tests/        synthetic verification suite
 2. Create the `vX.Y.Z` tag and push it:
 
    ```bash
-   git tag v1.2.0
-   git push origin v1.2.0
+   git tag v1.0.0
+   git push origin v1.0.0
    ```
 
    Alternatively, run **Actions → Release → Run workflow** and enter the tag;
@@ -282,9 +288,10 @@ tests/        synthetic verification suite
    `windows-latest`, then smoke-tests the executable (`--version`, a
    bundled-library selftest, a headless DNG stack and an offscreen GUI start).
 4. On success it publishes the GitHub Release. From **Releases → Multi-Image
-   Optimizer v1.2.0 → Assets** download `MultiImageOptimizer.exe` on its own,
+   Optimizer v1.0.0 → Assets** download `MultiImageOptimizer.exe` on its own,
    or the `MultiImageOptimizer-windows-x64.zip` archive, which also contains
-   `LICENSE` and `THIRD_PARTY_NOTICES.md`; `SHA256SUMS` covers every asset.
+   `LICENSE` and `THIRD_PARTY_NOTICES.md`. `MultiImageOptimizer-build-kit.zip`
+   rebuilds the exe locally, and `SHA256SUMS` covers every asset.
 
 ### Building the exe locally (Windows)
 

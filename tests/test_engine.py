@@ -170,6 +170,31 @@ class StackingTests(unittest.TestCase):
         self.assertLess(abs(float(result[50, 80].mean()) - float(scene[50, 80].mean())), 0.02)
         self.assertLess(rmse(result, scene), 0.01)
 
+    def test_median_stack_uses_configured_temp_dir(self) -> None:
+        """The scratch stack must land in --temp-dir in single mode too."""
+        scene = make_scene(96, 128)
+        stack = np.repeat(scene[None], 3, axis=0)
+        folder = self.temp / "tempdir"
+        write_frames(folder, stack)
+        scratch = self.temp / "scratch"
+        scratch.mkdir()
+
+        config = pipeline.PipelineConfig(
+            input_dir=str(folder),
+            mode="noise_reduction",
+            stack_method="median",
+            output_format="png",
+            temp_dir=str(scratch),
+        )
+        with mock.patch.object(
+            stacker, "_open_scratch", wraps=stacker._open_scratch
+        ) as spy:
+            pipeline.run_pipeline(config)
+
+        used = [Path(call.args[2]) for call in spy.call_args_list]
+        self.assertTrue(used, "median stacking never opened a scratch file")
+        self.assertTrue(all(path == scratch for path in used), used)
+
     def test_drizzle_beats_bicubic_upscale(self) -> None:
         high = make_scene(420, 420, seed=11)
         rng = np.random.default_rng(5)
