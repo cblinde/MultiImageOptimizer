@@ -476,6 +476,27 @@ first run (roughly 200 MB of downloads); later runs reuse `.python` and only
 rebuild. Delete `.python`, `.downloads`, `build`, `dist` and `out` to start
 from scratch.
 
+## Possible future improvements
+
+These are ideas, not commitments; none of them is implemented yet. They are
+ordered by expected value for users, not by implementation order. Effort:
+**S** up to a day, **M** 2–5 days, **L** more than a week.
+
+| Rank | Improvement | Why it is worth doing | Effort |
+| --- | --- | --- | --- |
+| 1 | Publish and verify a release end to end | The easiest install path in this README depends on the release assets; a full run also exercises tag creation, draft upload, permissions and checksums. | S |
+| 2 | Sign the Windows exe and attest release assets | An unsigned exe triggers SmartScreen and is blocked by some organisations; signing plus artifact attestation/SBOM makes the download trustworthy and verifiable. | M |
+| 3 | Run the test suite on Linux and macOS in CI | The README says the Python version runs on both, but CI only covers Windows; a matrix catches POSIX path, Qt and multiprocessing regressions. | S–M |
+| 4 | Batch queue and batch CLI | A run currently handles one folder; a queue or manifest with skip-existing, per-job status and unattended runs matches real multi-capture shoots. | M |
+| 5 | Frame-quality filtering and exposure normalisation | Handheld bursts contain blurred or differently exposed frames; scoring, optional rejection and normalisation before stacking prevent ghosting and softness. | M–L |
+| 6 | Memory and performance guard for large stacks | 50 MP and 360° stacks can exhaust RAM or scratch disk; a preflight estimate, bounded parallelism and a tiled/streaming mean make the target sizes reliable. | L |
+| 7 | Result preview and quality diagnostics in the GUI | A before/after preview, clipping histogram, coverage map and used/skipped-frame report make bad settings visible without opening an external viewer. | M–L |
+| 8 | Preserve metadata and provenance | EXIF/XMP, ICC, capture details and a settings/frame-list sidecar keep results searchable in a DAM and reproducible later. | M |
+| 9 | Real-RAW regression corpus and GUI interaction tests | The current suite is synthetic and the GUI is only smoke-tested; real CR3/NEF/RAF files and QTest flows cover colour, orientation, LibRaw versions and UI regressions. | M |
+| 10 | Lock dependencies and automate security updates | Lower-bound-only requirements make builds drift; a hash lockfile, Dependabot/Renovate, `pip-audit` and an SBOM make them reproducible and auditable. | S–M |
+| 11 | Package for macOS and Linux | The sources run there, but users still install Python and Qt themselves; an AppImage or signed DMG completes the download path. | L |
+| 12 | Presets, localisation and accessibility | Named presets, a German UI and keyboard/contrast improvements lower the barrier for repeat workflows and a wider audience. | M |
+
 ## Limitations
 
 - This project only combines existing frames: it does not synthesise or generate
