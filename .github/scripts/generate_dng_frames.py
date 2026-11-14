@@ -14,8 +14,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-import rawio  # noqa: E402  (needs the repository root on sys.path)
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+import rawio  # noqa: E402  (the application modules live in src/)
 
 
 def main(directory: str) -> int:

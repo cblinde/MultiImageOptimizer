@@ -235,7 +235,15 @@ jobs:
           finally {
             Pop-Location
           }
-          if ($code -ne 0) { throw "BUILD.bat failed with exit code $code" }
+          if ($code -ne 0) {
+            $log = Join-Path $kit "build-log.txt"
+            if (Test-Path $log) {
+              Write-Host "----- build-log.txt (last 150 lines) -----"
+              Get-Content -LiteralPath $log -Tail 150 | Write-Host
+              Write-Host "----- end of build-log.txt -----"
+            }
+            throw "BUILD.bat failed with exit code $code"
+          }
 
           $exe = Join-Path $kit "out\MultiImageOptimizer.exe"
           foreach ($path in @(
@@ -282,3 +290,11 @@ jobs:
 
           $size = (Get-Item $exe).Length / 1MB
           Write-Host ("Kit build OK: {0:N1} MB executable" -f $size)
+
+      - name: Upload kit build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kit-build-log
+          path: kit/build-log.txt
+          if-no-files-found: ignore
