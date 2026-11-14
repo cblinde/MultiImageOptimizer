@@ -1,0 +1,251 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (defaults to v<APP_VERSION from main.py>)"
+        required: false
+        type: string
+      draft:
+        description: "Create the release as a draft"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  APP_BINARY: MultiImageOptimizer
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Resolve the release tag once so every job names its artifacts identically.
+  # ---------------------------------------------------------------------------
+  prepare:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Determine tag and version
+        id: tag
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            version="$(python - <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          source = pathlib.Path("main.py").read_text(encoding="utf-8")
+          match = re.search(r'^APP_VERSION\s*=\s*"([^"]+)"', source, re.MULTILINE)
+          if not match:
+              sys.exit("APP_VERSION not found in main.py")
+          print(match.group(1))
+          PY
+            )"
+            tag="v${version}"
+          else
+            tag="$REF_NAME"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a valid release tag (expected vX.Y.Z)"
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag"
+
+  # ---------------------------------------------------------------------------
+  # Compile everything and run the synthetic test suite before packaging.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Test (${{ matrix.os }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Byte-compile all sources
+        run: python -m compileall -q aligner.py gui.py main.py pipeline.py rawio.py stacker.py tests
+
+      - name: Run test suite
+        run: python -m unittest discover -s tests -v
+
+  # ---------------------------------------------------------------------------
+  # Build the standalone executable on each supported platform and package it.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build ${{ matrix.artifact }}
+    needs: [prepare, test]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: MultiImageOptimizer-linux-x64
+            archive: tar.gz
+          - os: windows-latest
+            artifact: MultiImageOptimizer-windows-x64
+            archive: zip
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # Qt's bundled shared libraries need these at analysis time on Linux.
+      - name: Install Linux runtime libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libgl1 libegl1 libxkbcommon0 libxkbcommon-x11-0 libfontconfig1 \
+            libfreetype6 libdbus-1-3 libxcb-cursor0 libxcb-icccm4 \
+            libxcb-keysyms1 libxcb-render-util0 libxcb-shape0 libxcb-xkb1 \
+            libxcb-image0 libxcb-util1
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.3"
+
+      - name: Build release executable
+        run: pyinstaller --noconfirm --clean --log-level WARN build.spec
+
+      # ---------------------------------------------------------------- Linux
+      - name: Package Linux archive
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          ARTIFACT: ${{ matrix.artifact }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          package="$ARTIFACT-$VERSION"
+          mkdir -p "stage/$package" release-assets
+          cp "dist/$APP_BINARY" "stage/$package/"
+          cp README.md "stage/$package/"
+          tar -C stage -czf "release-assets/$package.tar.gz" "$package"
+          ls -l release-assets
+
+      # -------------------------------------------------------------- Windows
+      - name: Package Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          ARTIFACT: ${{ matrix.artifact }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          $package = "$env:ARTIFACT-$env:VERSION"
+          New-Item -ItemType Directory -Force -Path "stage/$package" | Out-Null
+          Copy-Item "dist/$env:APP_BINARY.exe" "stage/$package/"
+          Copy-Item README.md "stage/$package/"
+          Compress-Archive -Path "stage/$package" -DestinationPath "release-assets/$package.zip" -Force
+          Get-ChildItem release-assets
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Publish the GitHub Release with the executables, the source tarball and a
+  # checksum manifest attached.
+  # ---------------------------------------------------------------------------
+  release:
+    name: Publish GitHub Release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout first: its default clean step would remove downloaded artifacts.
+      - uses: actions/checkout@v4
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Add source archive and checksums
+        shell: bash
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz \
+            --prefix="MultiImageOptimizer-$VERSION/" \
+            -o "release-assets/MultiImageOptimizer-$VERSION-source.tar.gz" HEAD
+          ( cd release-assets && sha256sum ./* > SHA256SUMS )
+          ls -l release-assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          name: Multi-Image Optimizer ${{ needs.prepare.outputs.tag }}
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ contains(needs.prepare.outputs.tag, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: release-assets/*
+          body: |
+            Multi-Image Optimizer ${{ needs.prepare.outputs.version }}.
+
+            Standalone builds (no Python installation required):
+
+            | Platform | Archive |
+            | --- | --- |
+            | Windows x64 | `MultiImageOptimizer-windows-x64-*.zip` |
+            | Linux x64 | `MultiImageOptimizer-linux-x64-*.tar.gz` |
+
+            Source code and `SHA256SUMS` are attached as well. Run the executable
+            without arguments for the GUI, or with `--help` for the CLI.

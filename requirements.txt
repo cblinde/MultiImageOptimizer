@@ -1,0 +1,9 @@
+# Runtime dependencies
+numpy>=1.26
+opencv-python-headless>=4.9
+rawpy>=0.21
+tifffile>=2023.7.10
+PyQt6>=6.5
+# Supplies MSVCP140.dll/VCRUNTIME140.dll on Windows machines that do not have
+# the Visual C++ redistributable installed; rawpy's raw_r.dll needs them.
+msvc-runtime>=14.40; platform_system == "Windows"
