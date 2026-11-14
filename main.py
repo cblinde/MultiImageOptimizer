@@ -279,7 +279,7 @@ def launch_gui(
     auto_start: bool = False,
     forced_mode: Optional[str] = None,
 ) -> int:
-    """Import and start the PyQt6 interface.
+    """Import and start the PySide6 interface.
 
     Args:
         initial_dir: Folder to pre-select, used for folders dropped onto the
@@ -292,8 +292,8 @@ def launch_gui(
         from gui import run_gui
     except ImportError as exc:
         message = (
-            "The graphical interface requires PyQt6.\n"
-            "Install it with:  pip install PyQt6\n"
+            "The graphical interface requires PySide6.\n"
+            "Install it with:  pip install PySide6\n"
             f"Details: {exc}"
         )
         LOGGER.error("%s", message)
@@ -332,7 +332,7 @@ def run_selftest() -> int:
         ("OpenCV", "cv2"),
         ("tifffile", "tifffile"),
         ("rawpy/LibRaw", "rawpy"),
-        ("PyQt6/Qt", "PyQt6.QtWidgets"),
+        ("PySide6/Qt", "PySide6.QtWidgets"),
     )
     failed = False
     for label, module in checks:

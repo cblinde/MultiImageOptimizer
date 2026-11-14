@@ -230,7 +230,7 @@ pipeline.py   UI-agnostic orchestration and summaries
 aligner.py    ORB + RANSAC + ECC sub-pixel registration
 stacker.py    mean/median stacking and drizzle super-resolution
 rawio.py      linear RAW/raster decoding, 16-bit TIFF/PNG/DNG writing
-gui.py        PyQt6 interface with a QThread worker
+gui.py        PySide6 interface with a QThread worker
 build.spec    PyInstaller one-file recipe
 .github/      CI (tests + Windows build) and release workflows
 tests/        synthetic verification suite
@@ -242,7 +242,7 @@ tests/        synthetic verification suite
   is missing. `pip install msvc-runtime` (already in `requirements.txt`) or
   install the Visual C++ 2015–2022 redistributable.
 - **Which bundled library failed?** — run `MultiImageOptimizer.exe --selftest`.
-  It imports NumPy, OpenCV, tifffile, rawpy and PyQt6 inside the bundled build
+  It imports NumPy, OpenCV, tifffile, rawpy and PySide6 inside the bundled build
   and names every library that cannot load.
 - **"Could not register at least two frames"** — the frames do not overlap,
   the scene is textureless (sky, blank wall) or motion exceeds 35 % of the

@@ -1,4 +1,4 @@
-"""PyQt6 front-end for the multi-frame RAW optimizer.
+"""PySide6 front-end for the multi-frame RAW optimizer.
 
 Heavy work always happens in :class:`ProcessingWorker`, a ``QThread`` that
 calls :func:`pipeline.run_pipeline` and reports back through signals.  The
@@ -14,7 +14,7 @@ from pathlib import Path
 from string import Template
 from typing import Optional
 
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QPointF,
     QSettings,
     QTemporaryDir,
@@ -22,9 +22,9 @@ from PyQt6.QtCore import (
     QTimer,
     Qt,
     QUrl,
-    pyqtSignal,
+    Signal,
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QColor,
     QDesktopServices,
     QDragEnterEvent,
@@ -36,7 +36,7 @@ from PyQt6.QtGui import (
     QPolygonF,
     QShortcut,
 )
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
@@ -270,11 +270,11 @@ def build_stylesheet() -> str:
 class ProcessingWorker(QThread):
     """Background worker executing one pipeline run."""
 
-    progress = pyqtSignal(int, str)
-    log = pyqtSignal(str)
-    completed = pyqtSignal(object)
-    failed = pyqtSignal(str)
-    cancelled = pyqtSignal()
+    progress = Signal(int, str)
+    log = Signal(str)
+    completed = Signal(object)
+    failed = Signal(str)
+    cancelled = Signal()
 
     def __init__(self, config: PipelineConfig, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -473,7 +473,9 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         self._build_ui()
-        QShortcut(QKeySequence("F1"), self, activated=self._show_help)
+        # PySide6 does not accept signal names as constructor keywords.
+        self._help_shortcut = QShortcut(QKeySequence("F1"), self)
+        self._help_shortcut.activated.connect(self._show_help)
         self._apply_initial_geometry()
         self._load_settings()
         if forced_mode:

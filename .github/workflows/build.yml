@@ -81,8 +81,8 @@ jobs:
             throw "MultiImageOptimizer.exe --version printed no version string"
           }
 
-      # Import PyQt6 and rawpy inside the bundle. --version exits before either
-      # import, so this is the check that fails on a missing Qt6 or LibRaw DLL.
+      # Import PySide6 and rawpy inside the bundle. --version exits before
+      # either import, so this is what fails on a missing Qt6 or LibRaw DLL.
       - name: Smoke-test bundled libraries
         shell: pwsh
         timeout-minutes: 5
