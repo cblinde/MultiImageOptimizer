@@ -4,12 +4,13 @@ on:
   push:
     branches:
       - main
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  # Same test + build used for releases, so a Windows problem shows up here
-  # before a tag is pushed.
+  # Same test + build used for releases, so Windows problems show up on pull
+  # requests and on main, before a tag is pushed.
   build:
     uses: ./.github/workflows/build.yml
