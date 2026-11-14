@@ -1,4 +1,4 @@
-"""Fail when a release tag does not match ``APP_VERSION`` in ``main.py``.
+"""Fail when a release tag does not match ``APP_VERSION`` in ``src/main.py``.
 
 The release workflow runs this before uploading anything, so a tag such as
 ``v1.0.1`` cannot publish an executable that still reports ``1.0.0``::
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 
-def read_app_version(path: Path = Path("main.py")) -> str:
+def read_app_version(path: Path = Path("src/main.py")) -> str:
     """Return APP_VERSION from the module body of *path*."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     for node in tree.body:
@@ -41,7 +41,7 @@ def main(argv: list[str]) -> int:
     if version_from_tag != version:
         print(
             f"::error::Tag '{tag}' does not match APP_VERSION '{version}' in "
-            "main.py. Bump APP_VERSION to the released version, or retag the "
+            "src/main.py. Bump APP_VERSION to the released version, or retag the "
             "commit that declares it."
         )
         return 1

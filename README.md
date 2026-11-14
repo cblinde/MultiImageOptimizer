@@ -43,7 +43,7 @@ Requires Python 3.12, the interpreter CI and the build kit use.
 ```bash
 python -m venv .venv
 .venv\Scripts\activate            # Windows
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 ```
 
 On Windows, `msvc-runtime` supplies `MSVCP140.dll`/`VCRUNTIME140.dll` inside the
@@ -54,7 +54,7 @@ Windows loader automatically.
 ## GUI
 
 ```bash
-python main.py
+python src/main.py
 ```
 
 or double-click `MultiImageOptimizer.exe`. Choose the input — a folder with
@@ -110,25 +110,25 @@ Any argument launches headless mode:
 
 ```bash
 # Noise reduction, median stack, 16-bit DNG output
-python main.py -i "D:\shoots\room" --mode noise_reduction --stack-method median \
+python src/main.py -i "D:\shoots\room" --mode noise_reduction --stack-method median \
     --output-format dng -o "D:\shoots\room\clean.dng"
 
 # 2x drizzle super-resolution from a 12-frame burst
-python main.py -i "D:\shoots\room" --mode super_resolution --upscale 2 \
+python src/main.py -i "D:\shoots\room" --mode super_resolution --upscale 2 \
     --pixfrac 0.75 --output-format tiff -o "D:\shoots\room\room_2x.tif"
 
 # Same stack as a 16-bit PNG for viewing/sharing, from JPEG or PNG sources too
-python main.py -i "D:\shoots\room" --stack-method mean \
+python src/main.py -i "D:\shoots\room" --stack-method mean \
     --output-format png -o "D:\shoots\room\reduced.png"
 
 # Both results in one run: stack plus 2x drizzle frame
-python main.py -i "D:\shoots\room" --mode both --output-format png
+python src/main.py -i "D:\shoots\room" --mode both --output-format png
 
 # Default output next to the sources, plus the aligned frames for inspection
-python main.py -i "D:\shoots\room" --save-aligned
+python src/main.py -i "D:\shoots\room" --save-aligned
 
 # Explicit files instead of a folder (opens the GUI and starts both pipelines)
-python main.py D:\shoot\IMG_0001.dng D:\shoot\IMG_0002.dng D:\shoot\IMG_0003.dng
+python src/main.py D:\shoot\IMG_0001.dng D:\shoot\IMG_0002.dng D:\shoot\IMG_0003.dng
 ```
 
 | Option | Default | Meaning |
@@ -202,7 +202,7 @@ discovery deliberately skips tool outputs.
 
 ```bash
 pip install "pyinstaller>=6.10,<7"
-pyinstaller --noconfirm build.spec
+pyinstaller --noconfirm src/build.spec
 ```
 
 On Windows without a prepared Python, double-click `BUILD.bat` instead: it
@@ -231,25 +231,21 @@ the drag-and-drop entry point routing.
 ## Project layout
 
 ```
-main.py       CLI/GUI routing, argument parsing, logging
-pipeline.py   UI-agnostic orchestration and summaries
-aligner.py    ORB + RANSAC + ECC sub-pixel registration
-stacker.py    mean/median stacking and drizzle super-resolution
-rawio.py      linear RAW/raster decoding, 16-bit TIFF/PNG/DNG writing
-gui.py        PySide6 interface with a QThread worker
-build.spec    PyInstaller one-file recipe
-BUILD.bat     one-click Windows build (portable Python, no setup)
-build.ps1     the steps BUILD.bat runs
-LICENSE       project licence (MIT)
-THIRD_PARTY_NOTICES.md  bundled-component licences, including Qt/PySide6 LGPL-3.0
-.github/      CI (tests + Windows build) and release workflows
-tests/        synthetic verification suite
+BUILD.bat      one-click Windows build (portable Python, no setup)
+README.md      this guide
+LICENSE        project licence (MIT)
+THIRD_PARTY_NOTICES.md  licences of every bundled component
+src/           application source and build recipe
+               main.py, gui.py, pipeline.py, aligner.py, stacker.py, rawio.py,
+               build.spec, build.ps1, requirements.txt
+tests/         synthetic verification suite
+.github/       CI (tests + Windows build) and release workflows
 ```
 
 ## Troubleshooting
 
 - **`ImportError: DLL load failed while importing _rawpy`** — the MSVC runtime
-  is missing. `pip install msvc-runtime` (already in `requirements.txt`) or
+  is missing. `pip install msvc-runtime` (already in `src/requirements.txt`) or
   install the Visual C++ 2015–2022 redistributable.
 - **Which bundled library failed?** — run `MultiImageOptimizer.exe --selftest`.
   It imports NumPy, OpenCV, tifffile, rawpy and PySide6 inside the bundled build
@@ -270,7 +266,7 @@ tests/        synthetic verification suite
 
 ### Cutting a release
 
-1. Set `APP_VERSION` in `main.py` to the release version and commit it. That is
+1. Set `APP_VERSION` in `src/main.py` to the release version and commit it. That is
    the only definition: the GUI imports it, so `--version` and the window title
    always agree. The tag must be `v` + `APP_VERSION` (for example `v1.0.1` for
    `1.0.1`); the release job compares the two and fails instead of publishing a
@@ -296,14 +292,14 @@ tests/        synthetic verification suite
 ### Building the exe locally (Windows)
 
 Releases also ship `MultiImageOptimizer-build-kit.zip`, which contains the
-source, `build.spec`, the licence files and the build scripts. To rebuild the
+source, `src/build.spec`, the licence files and the build scripts. To rebuild the
 executable on your own machine:
 
 1. Extract the archive to a short, writable path such as `C:\mio-build`.
 2. Double-click `BUILD.bat` and wait.
 
 The first run downloads the official portable Python 3.12 into `.python` and
-the build dependencies into it at `requirements.txt` versions, so there is no
+the build dependencies into it at `src/requirements.txt` versions, so there is no
 system Python install, no registry change, no admin prompt and no need for
 developer tools. It then runs PyInstaller and leaves you with:
 

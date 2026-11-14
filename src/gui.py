@@ -77,7 +77,7 @@ from pipeline import (
 
 APP_NAME = "Multi-Image Optimizer"
 
-# main.py owns APP_VERSION so --version and the window title cannot drift.
+# src/main.py owns APP_VERSION so --version and the window title cannot drift.
 # The fallback keeps gui.py importable on its own, without the CLI module.
 try:
     from main import APP_VERSION
@@ -386,10 +386,10 @@ Flick through them to judge whether the registration is right.</p>
 <p>Any option runs the program headless. A bare folder or file list opens the GUI
 and starts at once — that is what a drop does.</p>
 <pre>
-main.py -i DIR --mode both --output-format png
-main.py -i DIR --mode super_resolution --upscale 2 --pixfrac 0.75 -o out.dng
-main.py -i DIR --stack-method median --save-aligned
-main.py FILE1.dng FILE2.dng FILE3.dng        # selection, opens the GUI
+MultiImageOptimizer.exe -i DIR --mode both --output-format png
+MultiImageOptimizer.exe -i DIR --mode super_resolution --upscale 2 --pixfrac 0.75 -o out.dng
+MultiImageOptimizer.exe -i DIR --stack-method median --save-aligned
+MultiImageOptimizer.exe FILE1.dng FILE2.dng FILE3.dng   # selection, opens the GUI
 </pre>
 <table cellpadding="4" cellspacing="0">
 <tr><td><code>-i, --input-dir</code></td><td>Folder with the frames.</td></tr>

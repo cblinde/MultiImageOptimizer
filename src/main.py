@@ -2,10 +2,10 @@
 
 Usage examples::
 
-    python main.py                       # opens the GUI (double-click friendly)
-    python main.py --help                # CLI help
-    python main.py -i ./frames --mode super_resolution --upscale 2 -o ./out/result.dng
-    python main.py ./frames              # folder dropped on the exe: GUI + auto-start
+    python src/main.py                   # opens the GUI (double-click friendly)
+    python src/main.py --help            # CLI help
+    python src/main.py -i ./frames --mode super_resolution --upscale 2 -o ./out/result.dng
+    python src/main.py ./frames          # folder dropped on the exe: GUI + auto-start
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ def _ensure_standard_streams() -> None:
 def build_parser() -> argparse.ArgumentParser:
     """Create the command line parser."""
     parser = argparse.ArgumentParser(
-        prog="main.py",
+        prog="MultiImageOptimizer",
         description=(
             "Multi-frame RAW super-resolution and noise reduction engine. "
             "Runs headless when processing options are supplied and opens the GUI "

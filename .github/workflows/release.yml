@@ -40,9 +40,10 @@ jobs:
       - name: Build local Windows build kit
         run: |
           set -euo pipefail
-          mkdir -p kit
-          cp BUILD.bat build.ps1 main.py gui.py pipeline.py aligner.py stacker.py rawio.py \
-            build.spec requirements.txt LICENSE THIRD_PARTY_NOTICES.md README.md kit/
+          # Same layout as the repository so README paths stay valid.
+          mkdir -p kit/src
+          cp BUILD.bat README.md LICENSE THIRD_PARTY_NOTICES.md kit/
+          cp src/*.py src/build.spec src/requirements.txt src/build.ps1 kit/src/
           ( cd kit && zip -qr ../MultiImageOptimizer-build-kit.zip . )
 
       - uses: actions/download-artifact@v4

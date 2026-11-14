@@ -10,10 +10,15 @@ files.  Run with::
 from __future__ import annotations
 
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+
+# The application modules live in src/; make them importable when the suite is
+# run from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import cv2
 import numpy as np

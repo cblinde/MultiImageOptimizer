@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 """PyInstaller recipe for the standalone Multi-Image Optimizer executable.
 
-Build with::
+Build from the repository root with::
 
-    pyinstaller --noconfirm build.spec
+    pyinstaller --noconfirm src/build.spec
 
 The result is ``dist/MultiImageOptimizer.exe``: a single windowed binary that
 bundles Python, Qt, NumPy, OpenCV, LibRaw (via rawpy) and the MSVC runtime, so
@@ -13,8 +13,13 @@ the target machine needs no Python installation.
 import glob
 import os
 import sys
+from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_dynamic_libs
+
+# The spec lives next to the sources, but PyInstaller may be started from the
+# repository root, so resolve everything against the spec's own directory.
+SOURCE_DIR = Path(SPECPATH).resolve()
 
 # LibRaw (raw_r.dll) and its OpenMP runtime ship inside the rawpy package.
 binaries = collect_dynamic_libs("rawpy")
@@ -34,8 +39,8 @@ for _directory in dict.fromkeys(_runtime_dirs):
             binaries.append((_dll, "."))
 
 a = Analysis(
-    ["main.py"],
-    pathex=[],
+    [str(SOURCE_DIR / "main.py")],
+    pathex=[str(SOURCE_DIR)],
     binaries=binaries,
     datas=[],
     hiddenimports=["rawpy", "tifffile"],

@@ -2,34 +2,47 @@
 <#
     Builds MultiImageOptimizer.exe on Windows without any installed tooling.
 
-    BUILD.bat calls this script. It downloads the official Python 3.12
-    embeddable runtime into .python, enables site-packages, installs the
-    requirements plus PyInstaller into it, runs build.spec, and copies the
-    executable and licence files into out\.
+    BUILD.bat calls this script, either from src\ in the repository or from the
+    root of the flat release kit. It downloads the official Python 3.12
+    embeddable runtime into <project>\.python, enables site-packages, installs
+    the requirements plus PyInstaller into it, runs build.spec, and copies the
+    executable and licence files into <project>\out.
 
-    Nothing outside this folder is modified: there is no system Python install,
-    no registry change and no admin prompt. A 64-bit Windows 10/11 machine and
-    an internet connection on the first run are the only requirements.
+    Nothing outside the project folder is modified: there is no system Python
+    install, no registry change and no admin prompt. A 64-bit Windows 10/11
+    machine and an internet connection on the first run are the only
+    requirements.
 #>
 [CmdletBinding()]
-param()
+param(
+    # Folder that receives .python, dist, out and the zip (the kit root).
+    [string]$ProjectRoot = ""
+)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-$KitRoot = $PSScriptRoot
-$PythonDir = Join-Path $KitRoot '.python'
+$SourceDir = $PSScriptRoot
+if (-not $ProjectRoot) {
+    $ProjectRoot = Split-Path -Parent $SourceDir
+}
+$ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
+
+$PythonDir = Join-Path $ProjectRoot '.python'
 $PythonExe = Join-Path $PythonDir 'python.exe'
-$Downloads = Join-Path $KitRoot '.downloads'
-$LogFile = Join-Path $KitRoot 'build-log.txt'
-$OutDir = Join-Path $KitRoot 'out'
+$Downloads = Join-Path $ProjectRoot '.downloads'
+$LogFile = Join-Path $ProjectRoot 'build-log.txt'
+$OutDir = Join-Path $ProjectRoot 'out'
+$DistDir = Join-Path $ProjectRoot 'dist'
+$WorkDir = Join-Path $ProjectRoot 'build'
 $PythonVersion = '3.12.7'
 $PythonZipUrl = "https://www.python.org/ftp/python/$PythonVersion/python-$PythonVersion-embed-amd64.zip"
 $GetPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
-$RequiredFiles = @(
+$RequiredSources = @(
     'main.py', 'gui.py', 'pipeline.py', 'aligner.py', 'stacker.py', 'rawio.py',
-    'build.spec', 'requirements.txt', 'LICENSE', 'THIRD_PARTY_NOTICES.md'
+    'build.spec', 'requirements.txt'
 )
+$RequiredLicences = @('LICENSE', 'THIRD_PARTY_NOTICES.md')
 
 function Write-Step {
     param([string]$Message)
@@ -71,12 +84,17 @@ try {
     if (-not [Environment]::Is64BitOperatingSystem) {
         throw '64-bit Windows is required.'
     }
-    if ($KitRoot.Length -gt 110) {
-        throw "Extract the kit to a shorter path; the current one is $KitRoot."
+    if ($ProjectRoot.Length -gt 110) {
+        throw "Extract the kit to a shorter path; the current one is $ProjectRoot."
     }
-    foreach ($name in $RequiredFiles) {
-        if (-not (Test-Path -LiteralPath (Join-Path $KitRoot $name))) {
-            throw "Missing $name. Extract the complete zip archive before running BUILD.bat."
+    foreach ($name in $RequiredSources) {
+        if (-not (Test-Path -LiteralPath (Join-Path $SourceDir $name))) {
+            throw "Missing $name next to build.ps1. Extract the complete zip archive before running BUILD.bat."
+        }
+    }
+    foreach ($name in $RequiredLicences) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot $name))) {
+            throw "Missing $name in $ProjectRoot. Extract the complete zip archive before running BUILD.bat."
         }
     }
 
@@ -119,7 +137,7 @@ try {
     Invoke-Native -FilePath $PythonExe `
         -Arguments @(
             '-m', 'pip', 'install', '--disable-pip-version-check',
-            '--no-warn-script-location', '-r', (Join-Path $KitRoot 'requirements.txt'),
+            '--no-warn-script-location', '-r', (Join-Path $SourceDir 'requirements.txt'),
             'pyinstaller>=6.10,<7'
         ) `
         -Activity 'pip install'
@@ -131,10 +149,14 @@ try {
 
     Write-Step 'PyInstaller'
     Invoke-Native -FilePath $PythonExe `
-        -Arguments @('-m', 'PyInstaller', '--noconfirm', '--clean', 'build.spec') `
+        -Arguments @(
+            '-m', 'PyInstaller', '--noconfirm', '--clean',
+            '--distpath', $DistDir, '--workpath', $WorkDir,
+            (Join-Path $SourceDir 'build.spec')
+        ) `
         -Activity 'pyinstaller'
 
-    $exe = Join-Path $KitRoot 'dist\MultiImageOptimizer.exe'
+    $exe = Join-Path $DistDir 'MultiImageOptimizer.exe'
     if (-not (Test-Path -LiteralPath $exe)) {
         throw "PyInstaller finished without producing $exe."
     }
@@ -142,11 +164,11 @@ try {
     Write-Step 'Result'
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
     Copy-Item -LiteralPath $exe -Destination $OutDir -Force
-    foreach ($name in @('LICENSE', 'THIRD_PARTY_NOTICES.md')) {
-        Copy-Item -LiteralPath (Join-Path $KitRoot $name) -Destination $OutDir -Force
+    foreach ($name in $RequiredLicences) {
+        Copy-Item -LiteralPath (Join-Path $ProjectRoot $name) -Destination $OutDir -Force
     }
 
-    $bundle = Join-Path $KitRoot 'MultiImageOptimizer-windows-x64.zip'
+    $bundle = Join-Path $ProjectRoot 'MultiImageOptimizer-windows-x64.zip'
     if (Test-Path -LiteralPath $bundle) { Remove-Item -LiteralPath $bundle -Force }
     Compress-Archive -Path (Join-Path $OutDir '*') -DestinationPath $bundle
 
