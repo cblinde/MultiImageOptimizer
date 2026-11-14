@@ -319,15 +319,20 @@ only after every upload succeeded; the assets then appear under **Assets**.
 
    Alternatively, run **Actions → Release → Run workflow** and enter the tag;
    it is created from the selected commit if it does not exist yet.
-3. The same run calls the test suite and the PyInstaller build on
-   `windows-latest`, then smoke-tests the executable (`--version`, a
-   bundled-library selftest, a headless DNG stack and an offscreen GUI start).
-   A tag created by the workflow does not start a second run.
-4. On success it publishes the GitHub Release. From **Releases → Multi-Image
-   Optimizer v1.0.0 → Assets** download `MultiImageOptimizer.exe` on its own,
-   or the `MultiImageOptimizer-windows-x64.zip` archive, which also contains
-   `LICENSE` and `THIRD_PARTY_NOTICES.md`. `MultiImageOptimizer-build-kit.zip`
-   rebuilds the exe locally, and `SHA256SUMS` covers every asset.
+3. The same run calls the reusable Build workflow on `windows-latest`: the test
+   suite, the PyInstaller executable with its smoke tests (`--version`, the
+   bundled-library selftest, a headless DNG stack and an offscreen GUI start),
+   and the extracted build kit run through `BUILD.bat`. Any failure blocks the
+   release, and a tag created here does not start a second run.
+4. An existing tag must point at the commit being built; if it points at any
+   other commit, the run fails before anything is uploaded. A missing tag is
+   created at the built commit.
+5. Assets are uploaded to a **draft** release, and it is published only after
+   every upload succeeded. From **Releases → Multi-Image Optimizer v1.0.0 →
+   Assets** download `MultiImageOptimizer.exe` on its own, or the
+   `MultiImageOptimizer-windows-x64.zip` archive, which also contains `LICENSE`
+   and `THIRD_PARTY_NOTICES.md`. `MultiImageOptimizer-build-kit.zip` rebuilds
+   the exe locally, and `SHA256SUMS` covers every asset.
 
 If an automatic run fails after its tag was created, rerun it with
 **Actions → Release → Run workflow** for that tag; later pushes with the same
