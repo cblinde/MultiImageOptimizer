@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import List, Optional, Sequence
 
 APP_NAME = "Multi-Image Optimizer"
+#: Single definition of the release version; gui.py imports this so that
+#: --version and the window title cannot drift apart.
 APP_VERSION = "1.0.0"
 
 LOGGER = logging.getLogger("mio")

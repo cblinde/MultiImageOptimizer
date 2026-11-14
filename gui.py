@@ -76,7 +76,13 @@ from pipeline import (
 )
 
 APP_NAME = "Multi-Image Optimizer"
-APP_VERSION = "1.0.0"
+
+# main.py owns APP_VERSION so --version and the window title cannot drift.
+# The fallback keeps gui.py importable on its own, without the CLI module.
+try:
+    from main import APP_VERSION
+except Exception:  # pragma: no cover - only for a standalone gui.py
+    APP_VERSION = "1.0.0"
 
 #: Output format key -> suffix and file dialog filter.
 FORMAT_SUFFIXES = {"dng": ".dng", "tiff": ".tif", "png": ".png"}

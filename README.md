@@ -262,8 +262,9 @@ tests/        synthetic verification suite
 
 ### Cutting a release
 
-1. Set `APP_VERSION` in `main.py` to the release version and commit it, so the
-   binary reports the tag it ships under.
+1. Set `APP_VERSION` in `main.py` to the release version and commit it. That is
+   the only definition: the GUI imports it, so `--version` and the window title
+   always agree with the tag.
 2. Create the `vX.Y.Z` tag and push it:
 
    ```bash
