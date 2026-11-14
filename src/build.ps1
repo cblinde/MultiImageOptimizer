@@ -71,9 +71,20 @@ function Invoke-Native {
         [string]$Activity
     )
     Write-Host "  $Activity" -ForegroundColor DarkGray
-    & $FilePath @Arguments 2>&1 | Tee-Object -FilePath $LogFile -Append
-    if ($LASTEXITCODE -ne 0) {
-        throw "$Activity failed with exit code $LASTEXITCODE. See build-log.txt."
+    # Windows PowerShell 5.1 turns redirected native stderr into a terminating
+    # error while $ErrorActionPreference is 'Stop'. pip and PyInstaller write
+    # warnings there, so capture the exit code with 'Continue' and throw below.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $FilePath @Arguments 2>&1 | Tee-Object -FilePath $LogFile -Append
+        $code = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0) {
+        throw "$Activity failed with exit code $code. See build-log.txt."
     }
 }
 
@@ -126,8 +137,19 @@ try {
     Write-Host "  using Python $version"
 
     Write-Step 'pip'
-    & $PythonExe -m pip --version *> $null
-    if ($LASTEXITCODE -ne 0) {
+    # A fresh embeddable runtime has no pip and prints "No module named pip" to
+    # stderr. Under Windows PowerShell 5.1 that stderr line would abort the
+    # script at 'Stop' before the exit code below could trigger the bootstrap.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $PythonExe -m pip --version *> $null
+        $pipReady = ($LASTEXITCODE -eq 0)
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+    if (-not $pipReady) {
         $getPip = Join-Path $Downloads 'get-pip.py'
         Get-KitFile -Uri $GetPipUrl -Destination $getPip
         Invoke-Native -FilePath $PythonExe -Arguments @($getPip) -Activity 'bootstrapping pip'
