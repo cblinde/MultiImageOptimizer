@@ -1,72 +1,33 @@
-# ---------------------------------------------------------------------------
 # Python byte code and caches
-# ---------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
-*$py.class
-*.pyo
 
-# ---------------------------------------------------------------------------
 # Virtual environments
-# ---------------------------------------------------------------------------
 .venv/
 venv/
 env/
-ENV/
-.python-version
 
-# ---------------------------------------------------------------------------
-# Build and packaging output
-# ---------------------------------------------------------------------------
+# Build output (build.spec is source and stays tracked)
 build/
 dist/
 bin/
-out/
-release/
-*.egg-info/
-.eggs/
-sdist/
-wheels/
 
-# PyInstaller intermediates (build.spec is source and stays tracked)
-pyinstaller/
-*.manifest
-
-# ---------------------------------------------------------------------------
-# Test, coverage and tooling caches
-# ---------------------------------------------------------------------------
+# Tool caches and coverage
 .pytest_cache/
-.coverage
-.coverage.*
-coverage.xml
-htmlcov/
-.tox/
-.nox/
 .mypy_cache/
 .ruff_cache/
-.pyright/
+.coverage
+.coverage.*
+htmlcov/
 
-# ---------------------------------------------------------------------------
 # IDE and editor files
-# ---------------------------------------------------------------------------
 .idea/
 .vscode/
-*.iml
 *.swp
-*.swo
-*~
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# ---------------------------------------------------------------------------
-# Temporary and generated runtime output
-# ---------------------------------------------------------------------------
+# Logs and generated runtime output
 *.log
-*.tmp
-*.temp
-*.scratch
-*.part
 tmp/
-temp/
 *_aligned/

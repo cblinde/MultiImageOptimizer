@@ -253,10 +253,9 @@ tests/        synthetic verification suite
 
 ## Releases
 
-Pushing a version tag (`v*.*.*`) or starting the **Release** workflow manually
-builds, tests and packages the standalone executables on Windows and Linux, then
-publishes a GitHub Release with the archives attached. See
-`.github/workflows/release.yml`.
+Pushing a version tag (`v*.*.*`), or running the **Release** workflow with an
+explicit tag, tests and builds the standalone executables on Windows and Linux
+and publishes them as a GitHub Release. See `.github/workflows/release.yml`.
 
 ## Limitations
 
