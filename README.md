@@ -149,6 +149,7 @@ python main.py D:\shoot\IMG_0001.dng D:\shoot\IMG_0002.dng D:\shoot\IMG_0003.dng
 | `--limit N` | all | Only use the first N frames (quick tests). |
 | `--temp-dir` | system temp | Scratch location for the median stack. |
 | `--gui` | off | Force the GUI even when other arguments are present. |
+| `--selftest` | off | Load the bundled native libraries (Qt, LibRaw, OpenCV) and exit; for diagnostics. |
 | `-v / -q` | info | More/less logging. `--log-file` appends to a file. |
 
 The exit code is `0` on success, `1` on a processing error, `2` for an invalid
@@ -267,8 +268,8 @@ tests/        synthetic verification suite
    Alternatively, run **Actions → Release → Run workflow** and enter the tag;
    it is created from the selected commit if it does not exist yet.
 3. The workflow reruns the test suite and the PyInstaller build on
-   `windows-latest`, then smoke-tests the executable (`--version`, a headless
-   DNG stack and an offscreen GUI start).
+   `windows-latest`, then smoke-tests the executable (`--version`, a
+   bundled-library selftest, a headless DNG stack and an offscreen GUI start).
 4. On success it publishes the GitHub Release. Download
    `MultiImageOptimizer.exe` and `SHA256SUMS` from **Releases → Multi-Image
    Optimizer v1.2.0 → Assets**.

@@ -134,6 +134,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force the graphical interface even when other arguments are given.",
     )
     parser.add_argument(
+        "--selftest",
+        action="store_true",
+        help=(
+            "Load the bundled native libraries (Qt, LibRaw, OpenCV) and exit; "
+            "useful for diagnosing a broken installation."
+        ),
+    )
+    parser.add_argument(
         "paths",
         nargs="*",
         metavar="PATH",
@@ -305,6 +313,43 @@ def launch_gui(
         return 1
 
 
+def _emit(message: str, error: bool = False) -> None:
+    """Write a line to stdout/stderr, tolerating windowed builds without one."""
+    stream = sys.stderr if error else sys.stdout
+    if stream is not None:
+        stream.write(message + "\n")
+        stream.flush()
+
+
+def run_selftest() -> int:
+    """Import every bundled native dependency and report what failed.
+
+    ``--version`` exits before these imports happen, so only this check catches
+    a frozen build with a missing Qt or LibRaw DLL.
+    """
+    checks = (
+        ("NumPy", "numpy"),
+        ("OpenCV", "cv2"),
+        ("tifffile", "tifffile"),
+        ("rawpy/LibRaw", "rawpy"),
+        ("PyQt6/Qt", "PyQt6.QtWidgets"),
+    )
+    failed = False
+    for label, module in checks:
+        try:
+            __import__(module)
+        except Exception as exc:  # missing DLLs raise ImportError/OSError
+            failed = True
+            _emit(f"{label}: failed - {exc}", error=True)
+        else:
+            _emit(f"{label}: ok")
+    if failed:
+        _emit("selftest failed", error=True)
+        return 1
+    _emit("selftest ok")
+    return 0
+
+
 def _fail(message: str) -> int:
     """Report a start-up problem and return the failure exit code."""
     LOGGER.error("%s", message)
@@ -388,6 +433,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(arguments)
     configure_logging(args.verbose, args.quiet, args.log_file)
+    if args.selftest:
+        return run_selftest()
     if args.paths:
         return _handle_dropped(args.paths, args.input_dir)
     if args.gui:

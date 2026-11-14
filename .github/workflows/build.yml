@@ -81,6 +81,30 @@ jobs:
             throw "MultiImageOptimizer.exe --version printed no version string"
           }
 
+      # Import PyQt6 and rawpy inside the bundle. --version exits before either
+      # import, so this is the check that fails on a missing Qt6 or LibRaw DLL.
+      - name: Smoke-test bundled libraries
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $exe = Join-Path $PWD "dist/MultiImageOptimizer.exe"
+          $stdout = Join-Path $env:RUNNER_TEMP "selftest.out"
+          $stderr = Join-Path $env:RUNNER_TEMP "selftest.err"
+          $process = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru `
+            -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+
+          $out = if (Test-Path $stdout) { Get-Content $stdout -Raw } else { "" }
+          $err = if (Test-Path $stderr) { Get-Content $stderr -Raw } else { "" }
+          Write-Host $out
+          if ($err) { Write-Host $err }
+
+          if ($process.ExitCode -ne 0) {
+            throw "Bundled library selftest exited with code $($process.ExitCode)"
+          }
+          if ($out -notmatch "selftest ok") {
+            throw "Bundled library selftest printed no success line"
+          }
+
       # DNG input forces the frozen exe to decode through rawpy/LibRaw, so a
       # missing raw_r.dll, OpenCV DLL or MSVC runtime fails the build.
       - name: Generate smoke frames
