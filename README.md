@@ -253,10 +253,22 @@ tests/        synthetic verification suite
 
 ## Releases
 
-Pushing a version tag (`v*.*.*`), or running the **Release** workflow with an
-explicit tag, tests and builds the self-contained `MultiImageOptimizer.exe` on a
-Windows runner and attaches it directly to a GitHub Release, with a
-`SHA256SUMS` manifest next to it. See `.github/workflows/release.yml`.
+Releases are cut from a version tag and built on a Windows runner.
+
+### Cutting a release
+
+Bump `APP_VERSION` in `main.py` so the binary reports the tagged version, then:
+
+```bash
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+The tag starts the **Release** workflow (or run it manually with an explicit
+tag). It runs the test suite and the PyInstaller build on `windows-latest`,
+smoke-tests the resulting binary with `--version`, then publishes a GitHub
+Release whose assets are the self-contained `MultiImageOptimizer.exe` and a
+`SHA256SUMS` manifest. See `.github/workflows/release.yml`.
 
 ## Limitations
 
