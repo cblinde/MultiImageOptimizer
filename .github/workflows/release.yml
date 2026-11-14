@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    # APP_VERSION lives in src/main.py, so other pushes cannot start a release.
+    # Path filters are not evaluated for tag pushes, which still trigger below.
+    paths:
+      - src/main.py
     tags:
       - "v*.*.*"
   workflow_dispatch:
