@@ -201,7 +201,10 @@ jobs:
   # The release ships a build kit, so execute it on Windows instead of trusting
   # its syntax: a broken BUILD.bat, a missing file or an incompatible package
   # fails CI here instead of surfacing for users after the release.
+  # Pull requests skip this duplicate full build; main pushes and every Release
+  # (workflow_call from a tag or workflow_dispatch) still run it.
   build-kit:
+    if: github.event_name != 'pull_request'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
