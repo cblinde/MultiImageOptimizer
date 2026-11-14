@@ -4,7 +4,7 @@ The release workflow runs this before uploading anything, so a tag such as
 ``v1.0.1`` cannot publish an executable that still reports ``1.0.0``::
 
     python .github/scripts/check_release_version.py v1.0.1
-    python .github/scripts/check_release_version.py --print-version
+    python .github/scripts/check_release_version.py --print-version [path]
 
 Exit codes: 0 when the tag matches or the version was printed, 1 on a
 mismatch, 2 when the tag is missing.
@@ -33,8 +33,9 @@ def read_app_version(path: Path = Path("src/main.py")) -> str:
 
 
 def main(argv: list[str]) -> int:
-    if argv[1:] == ["--print-version"]:
-        print(read_app_version())
+    if argv[1:2] == ["--print-version"]:
+        path = Path(argv[2]) if len(argv) > 2 else Path("src/main.py")
+        print(read_app_version(path))
         return 0
 
     tag = argv[1].strip() if len(argv) > 1 else ""

@@ -288,10 +288,10 @@ Two workflows live in `.github/workflows`:
   kit's `build-log.txt` and uploads that file as the **`kit-build-log`** artifact
   for the run.
 
-On a push to `main`, `prepare` reads `APP_VERSION` and the release only runs
-when `v<APP_VERSION>` does not exist yet; otherwise the run ends after that
-check and no Windows build is paid for. Tag pushes and manual runs always
-release. Build and publish happen in the same run, because a tag created with
+On a push to `main`, `prepare` compares `APP_VERSION` with the previous head
+and releases only when this push changed it and `v<APP_VERSION>` does not exist
+yet; otherwise the run ends after that check and no Windows build is paid for.
+Tag pushes and manual runs always release. Build and publish happen in the same run, because a tag created with
 `GITHUB_TOKEN` would not trigger a second workflow.
 
 The Release workflow calls Build first, so a failing test, exe or kit blocks
@@ -308,9 +308,11 @@ only after every upload succeeded; the assets then appear under **Assets**.
    always agree. The tag must be `v` + `APP_VERSION` (for example `v1.0.1` for
    `1.0.1`); the release job compares the two and fails instead of publishing a
    mismatched executable.
-2. Push that commit to `main`. If `v<APP_VERSION>` does not exist yet, the
-   Release workflow builds and publishes it automatically; later pushes with
-   the same version do nothing. To release explicitly, push the tag instead:
+2. Push that commit to `main`. If that push changes `APP_VERSION` and
+   `v<APP_VERSION>` does not exist yet, the Release workflow builds and
+   publishes it automatically; pushes that leave the version unchanged, or
+   where the tag already exists, do nothing. To release explicitly, push the
+   tag instead:
 
    ```bash
    git tag v1.0.0
