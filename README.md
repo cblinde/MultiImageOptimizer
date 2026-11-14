@@ -324,9 +324,10 @@ only after every upload succeeded; the assets then appear under **Assets**.
    bundled-library selftest, a headless DNG stack and an offscreen GUI start),
    and the extracted build kit run through `BUILD.bat`. Any failure blocks the
    release, and a tag created here does not start a second run.
-4. An existing tag must point at the commit being built; if it points at any
-   other commit, the run fails before anything is uploaded. A missing tag is
-   created at the built commit.
+4. When the tag already exists, the run builds that tag's commit (also for a
+   manual retry started from a newer branch). If the tag moves while the run is
+   in flight, it fails before anything is uploaded. A missing tag is created at
+   the built commit.
 5. Assets are uploaded to a **draft** release, and it is published only after
    every upload succeeded. From **Releases → Multi-Image Optimizer v1.0.0 →
    Assets** download `MultiImageOptimizer.exe` on its own, or the
